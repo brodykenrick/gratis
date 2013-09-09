@@ -1,5 +1,7 @@
 # gratis
 
+Modified by Brody Kenrick to support partial screne updates (allowing for use on Arduino Uno with smaller SRAM).
+
 ## Sketches
 
 These are example programs that will compile and run on the following platforms
