@@ -32,12 +32,18 @@
 // * delay 5 seconds (flash LED)
 // * display picture
 // * delay 5 seconds (flash LED)
-// * back to text display
+// * clear screen in partial writes
+// * delay 5 seconds (flash LED)
+// * display image/pattern in partial writes
+// * delay 5 seconds (flash LED)
+// * back to start of loop
 
 // Embedded Artists has modified Pervasive Display Inc's demo application 
 // to run on the 2.7 inch E-paper Display module (EA-LCD-009 
 
 // Brody Kenrick consolidated the EA code back into the repaper code
+
+// Brody Kenrick added partial screen support (demo just for 2.7" screen size now -- an easy extension though).
 
 
 #include <inttypes.h>
@@ -64,7 +70,7 @@
 #define SCREEN_SIZE 270 //BK
 
 // select two images from:  text_image text-hello cat aphrodite venus saturn
-#define IMAGE_1  text_image
+#define IMAGE_1  venus
 #define IMAGE_2  cat
 
 // set up images from screen size2
@@ -200,10 +206,16 @@ LM75A_Class LM75A;
 
 #define BITS_TO_BYTES(val_in_bits) (val_in_bits/8)
 
+#if (SCREEN_SIZE == 144)
+#error "Unsupported screen size for this demo. Extend/change the code below."
+#elif (SCREEN_SIZE == 200)
+#error "Unsupported screen size for this demo. Extend/change the code below."
+#endif
+
+#define PICTURE_HEIGHT_DIVISOR (8)
 //Alternating vertical stripes -- One bit on one bit off
 #define WHITE_STRIPES_SINGLE_LINE_2_7_CONTENTS 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
 
-#define PICTURE_HEIGHT_DIVISOR (8) //TODO: Swap this functionality around to be a line count
 static unsigned char working_buffer_eighth_image_2_7_bits[ BITS_TO_BYTES( IMAGE_1_WIDTH ) * (IMAGE_1_HEIGHT/PICTURE_HEIGHT_DIVISOR) ] =
 {
    WHITE_STRIPES_SINGLE_LINE_2_7_CONTENTS
