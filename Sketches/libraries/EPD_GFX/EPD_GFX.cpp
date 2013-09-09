@@ -42,32 +42,42 @@ void EPD_GFX::clear() {
 }
 
 
-void EPD_GFX::display(boolean clear_first = true, int stage = -1) {
+void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
+	// Erase old (optionally), display new
+	// Optionally begins and ends the EPD/SPI
+    Serial.print("display|pre all");
+    Serial.print(":Milliseconds=");
+    Serial.println( millis() );
+
 	int temperature = this->TempSensor.read();
 
-	// erase old, display new
-	this->EPD.begin();
-	this->EPD.setFactor(temperature);
-	if(stage == -1)
+	if(begin)
 	{
-	    //No stage .. so do internal repeats
-	    if(clear_first)
-	    {
-            this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
-        }
-    	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
-    }
-    else
-    {
-	    if(clear_first)
-	    {
-            this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
-        }
-    	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
-    }
+    	this->EPD.begin();
+    	this->EPD.setFactor(temperature);
+	}
+	
+    Serial.print("display|pre image_sram");
+    Serial.print(":Milliseconds=");
+    Serial.println( millis() );
 
-	this->EPD.end();
+    if(clear_first)
+    {
+        this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
+    }
+	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
+	
+    Serial.print("display|post image_sram");
+    Serial.print(":Milliseconds=");
+    Serial.println( millis() );
+	
+	if(end)
+	{
+    	this->EPD.end();
+	}
 }
+
+
 
 // Draw a character
 //Override this function (so we don't need to modify the Adafruit library).

@@ -48,15 +48,12 @@ private:
     LM75A_Class &TempSensor;
 #endif /* EMBEDDED_ARTISTS */
 	
-    int pixel_width;  // must be a multiple of 8
-    int pixel_height;
-	int pixel_height_shortened;
+    uint16_t pixel_width;  // must be a multiple of 8
+    uint16_t pixel_height;
+	uint16_t pixel_height_shortened;
 
-public:
-	int         vertical_pages; //TODO: Make a get()
-private:
-	int         vertical_page;
-
+	uint8_t         vertical_pages;
+	uint8_t         vertical_page;
 
     //Buffers are only a subset of the total frame. We call this a page.
 	uint8_t * new_image;
@@ -71,20 +68,19 @@ public:
 	};
 
 	// constructor
-	EPD_GFX(EPD_Class &epd, int pixel_width, int pixel_height,
+	EPD_GFX(EPD_Class &epd, uint16_t pixel_width, uint16_t pixel_height,
 #ifndef EMBEDDED_ARTISTS
-	S5813A_Class &temp_sensor) :
+	S5813A_Class &temp_sensor,
 #else /* EMBEDDED_ARTISTS */
-	LM75A_Class &temp_sensor) :
+	LM75A_Class &temp_sensor,
 #endif /* EMBEDDED_ARTISTS */
-		Adafruit_GFX(pixel_width, min(pixel_height,HEIGHT_SHORTENED_PAGE)), //NOTE: The Adafruit_GFX lib is set to a minimal value
+    uint16_t pixel_height_shortened = HEIGHT_SHORTENED_PAGE ):
+		Adafruit_GFX(pixel_width, min(pixel_height,pixel_height_shortened)), //NOTE: The Adafruit_GFX lib is set to the minimal value
 		EPD(epd), TempSensor(temp_sensor),
-		pixel_width(pixel_width), pixel_height(pixel_height)
+		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_shortened(pixel_height_shortened)
 	{
-
-    	pixel_height_shortened = min(pixel_height,HEIGHT_SHORTENED_PAGE);
-	
         //Assumes divisor with no remainder....
+        assert( (pixel_height%pixel_height_shortened) == 0);
 		vertical_pages   = pixel_height/pixel_height_shortened;
 		vertical_page = 0;
 
@@ -95,7 +91,7 @@ public:
 
 	void begin();
 	void end();
-	
+
 	void clear_new_image();
 
     //NOTE: There is also a height() from Adafruit_GFX
@@ -107,6 +103,11 @@ public:
     {
         vertical_page = vp;
         clear_new_image();
+    }
+
+    uint16_t get_vertical_page_count() 
+    {
+        return vertical_pages;
     }
 
 	// set a single pixel in new_image
@@ -135,18 +136,18 @@ public:
 #if 0
         else
         {
-        	Serial.print("drawPixel -- not on page! @ ");Serial.println(y);Serial.flush();
+        	Serial.print("drawPixel -- not on page! @ ");Serial.println(y);
         }
 #endif
 	}
 
 	// Change old image to new image
-	void display(boolean, int);
+	void display(boolean clear_first = true, boolean begin = false, boolean end = true);
 	void clear();
     void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size);
 
 };
 
-
 #endif
+

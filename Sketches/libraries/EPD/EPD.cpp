@@ -96,7 +96,8 @@ EPD_Class::EPD_Class(EPD_size size,
 	}
 
 	case EPD_2_7: {
-		this->stage_time = 630; // milliseconds
+		//this->stage_time = 630; // milliseconds
+        this->stage_time = 500; // milliseconds. BK -- Want this less!!
 		this->lines_per_display = 176;
 		this->dots_per_line = 264;
 		this->bytes_per_line = 264 / 8;
@@ -455,6 +456,11 @@ void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage,
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
 	long stage_time = this->factored_stage_time;
+    Serial.print("frame_sram_repeat for ");
+    Serial.print( stage_time );
+    Serial.print(" @ ");
+    Serial.println( millis() );
+
 	do {
 		unsigned long t_start = millis();
 		this->frame_sram(image, stage, first_line_no, line_count);
