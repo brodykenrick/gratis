@@ -74,7 +74,6 @@
 #endif
 
 //Note: This include is affected by EMBEDDED_ARTISTS define
-//Note: This include is affected by SCREEN_SIZE affected defines
 #include <EPD_GFX.h>
 
 
@@ -83,7 +82,7 @@
 
 
 // current version number
-#define THERMO_VERSION "3.BK.partial_screen"
+#define DEMO_VERSION "1.BK.partial_screen"
 
 
 #if defined(__MSP430_CPU__)
@@ -143,9 +142,9 @@ LM75A_Class LM75A;
 
 // graphic handler
 #ifndef EMBEDDED_ARTISTS
-EPD_GFX G_EPD(EPD, S5813A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, S5813A);
 #else /* EMBEDDED_ARTISTS */
-EPD_GFX G_EPD(EPD, LM75A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, LM75A);
 #endif /* EMBEDDED_ARTISTS */
 
 // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
@@ -194,7 +193,7 @@ void setup() {
 #endif
 	Serial.println();
 	Serial.println();
-	Serial.println("Thermo version: " THERMO_VERSION);
+	Serial.println("Version: " DEMO_VERSION);
 	Serial.println("Display: " MAKE_STRING(EPD_SIZE));
 	Serial.println();
 
@@ -286,7 +285,7 @@ void loop() {
               }
             }
           }
-  
+ 
           //Write text across pages
           {
             char temp[] = "Across";
