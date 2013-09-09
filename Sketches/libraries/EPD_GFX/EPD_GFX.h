@@ -13,6 +13,7 @@
 // governing permissions and limitations under the License.
 
 //Brody added support for embeded artists' display (temp sensor) via the preprocessor define EMBEDDED_ARTISTS
+//Brody added support for external display sizes via the preprocessor definitions EPD_WIDTH and EPD_HEIGHT
 
 
 #if !defined(EPD_GFX_H)
@@ -27,25 +28,49 @@
 #include <Wire.h>
 #include <LM75A.h>
 #endif /* EMBEDDED_ARTISTS */
+
 #include <Adafruit_GFX.h>
 
+#define NO_OLD_BUFFER //!< Always do a full clear (and not a transition) -- slower
 
 class EPD_GFX : public Adafruit_GFX {
 
 private:
 	EPD_Class &EPD;
+	//Temp sensor only needs a read function that returns in degrees Celsius
 #ifndef EMBEDDED_ARTISTS
 	S5813A_Class &TempSensor;
 #else /* EMBEDDED_ARTISTS */
     LM75A_Class &TempSensor;
 #endif /* EMBEDDED_ARTISTS */
 	
+#if defined(EPD_WIDTH)
+	static const int pixel_width  = EPD_WIDTH;  // must be a multiple of 8
+#else
+#warning "Issue with incoming EPD_WIDTH definition"
+	static const int pixel_width  = 264;  // must be a multiple of 8
+#endif
 
-	static const int pixel_width = 200;  // must be a multiple of 8
-	static const int pixel_height = 96;
+#if defined(EPD_HEIGHT)
+	static const int pixel_height = EPD_HEIGHT;
+#else
+#warning "Issue with incoming EPD_WIDTH definition"
+	static const int pixel_height = 176;
+#endif
 
-	uint8_t old_image[pixel_width * pixel_height / 8];
-	uint8_t new_image[pixel_width * pixel_height / 8];
+#define HEIGHT_SHORTENED_PAGE (22)
+
+	static const int pixel_height_shortened = HEIGHT_SHORTENED_PAGE;
+public:
+	static const int vertical_pages   = pixel_height/pixel_height_shortened; //assumes divisor with no remainder....
+	int              vertical_page;
+private:
+
+
+#if !defined(NO_OLD_BUFFER)
+	uint8_t old_image[pixel_width/8 * pixel_height_shortened;
+#endif
+	uint8_t new_image[pixel_width/8 * pixel_height_shortened];
 
 	EPD_GFX(EPD_Class&);  // disable copy constructor
 
@@ -62,28 +87,63 @@ public:
 #else /* EMBEDDED_ARTISTS */
 	EPD_GFX(EPD_Class &epd, LM75A_Class &temp_sensor) :
 #endif /* EMBEDDED_ARTISTS */
-		Adafruit_GFX(this->pixel_width, this->pixel_height),
+		Adafruit_GFX(this->pixel_width, this->pixel_height_shortened),
 		EPD(epd), TempSensor(temp_sensor)
 	{
+		vertical_page = 0;
 	}
 
 	void begin();
 	void end();
+	
+	void clear_new_image();
+
+    int16_t real_height(void) {
+        return pixel_height;
+    }
+
+    void set_vertical_page(int vp) 
+    {
+        vertical_page = vp;
+        clear_new_image();
+    }
 
 	// set a single pixel in new_image
-	void drawPixel(int x, int y, unsigned int colour) {
-		int bit = x & 0x07;
-		int byte = x / 8 + y * (pixel_width / 8);
-		int mask = 0x01 << bit;
-		if (BLACK == colour) {
-			this->new_image[byte] |= mask;
-		} else {
-			this->new_image[byte] &= ~mask;
+	//NOTE: This is the trickery by which we get to limit the vertical size
+	//This function does not write to the buffer if the pixel is not on the current page
+	//VERY inefficient!
+	void drawPixel(int x, int y, unsigned int colour)
+	{
+        if(
+            (y >= ( vertical_page    * this->pixel_height_shortened))
+            &&
+            (y <  ((vertical_page+1) * this->pixel_height_shortened))
+        )
+        {
+            y = (y % this->pixel_height_shortened); //Bring into 0..buffer size range
+	
+		    int bit = x & 0x07;
+		    int byte = x / 8 + y * (pixel_width / 8);
+		    int mask = 0x01 << bit;
+		    if (BLACK == colour) {
+			    this->new_image[byte] |= mask;
+		    } else {
+			    this->new_image[byte] &= ~mask;
+		    }
 		}
+#if 0
+        else
+        {
+        	Serial.print("drawPixel -- not on page! @ ");Serial.println(y);Serial.flush();
+        }
+#endif
 	}
 
-	// change from old image to new image
+	// Change old image to new image
 	void display();
+	void clear();
+    void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
+      uint16_t bg, uint8_t size);
 
 };
 
