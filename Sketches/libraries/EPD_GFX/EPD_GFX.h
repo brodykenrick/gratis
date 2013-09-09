@@ -1,3 +1,4 @@
+#define EMBEDDED_ARTISTS
 // Copyright 2013 Pervasive Displays, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,8 @@
 #define EPD_GFX_H 1
 
 #include <Arduino.h>
+#include <assert.h>
+
 #include <EPD.h>
 //Temperature sensor
 #ifndef EMBEDDED_ARTISTS
@@ -31,7 +34,8 @@
 
 #include <Adafruit_GFX.h>
 
-#define NO_OLD_BUFFER //!< Always do a full clear (and not a transition) -- slower
+#define NO_OLD_BUFFER //!< Always do a full clear (and not a transition from the old buffer) -- slower but less SRAM used.
+#define HEIGHT_SHORTENED_PAGE (22) //<! Later make this some calculation in the constructor (based on passed in memory usage requests....)
 
 class EPD_GFX : public Adafruit_GFX {
 
@@ -44,33 +48,21 @@ private:
     LM75A_Class &TempSensor;
 #endif /* EMBEDDED_ARTISTS */
 	
-#if defined(EPD_WIDTH)
-	static const int pixel_width  = EPD_WIDTH;  // must be a multiple of 8
-#else
-#warning "Issue with incoming EPD_WIDTH definition"
-	static const int pixel_width  = 264;  // must be a multiple of 8
-#endif
+    int pixel_width;  // must be a multiple of 8
+    int pixel_height;
+	int pixel_height_shortened;
 
-#if defined(EPD_HEIGHT)
-	static const int pixel_height = EPD_HEIGHT;
-#else
-#warning "Issue with incoming EPD_WIDTH definition"
-	static const int pixel_height = 176;
-#endif
-
-#define HEIGHT_SHORTENED_PAGE (22)
-
-	static const int pixel_height_shortened = HEIGHT_SHORTENED_PAGE;
 public:
-	static const int vertical_pages   = pixel_height/pixel_height_shortened; //assumes divisor with no remainder....
-	int              vertical_page;
+	int         vertical_pages; //TODO: Make a get()
 private:
+	int         vertical_page;
 
 
+    //Buffers are only a subset of the total frame. We call this a page.
 #if !defined(NO_OLD_BUFFER)
-	uint8_t old_image[pixel_width/8 * pixel_height_shortened;
+	uint8_t * old_image;
 #endif
-	uint8_t new_image[pixel_width/8 * pixel_height_shortened];
+	uint8_t * new_image;
 
 	EPD_GFX(EPD_Class&);  // disable copy constructor
 
@@ -82,15 +74,30 @@ public:
 	};
 
 	// constructor
+	EPD_GFX(EPD_Class &epd, int pixel_width, int pixel_height,
 #ifndef EMBEDDED_ARTISTS
-	EPD_GFX(EPD_Class &epd, S5813A_Class &temp_sensor) :
+	S5813A_Class &temp_sensor) :
 #else /* EMBEDDED_ARTISTS */
-	EPD_GFX(EPD_Class &epd, LM75A_Class &temp_sensor) :
+	LM75A_Class &temp_sensor) :
 #endif /* EMBEDDED_ARTISTS */
-		Adafruit_GFX(this->pixel_width, this->pixel_height_shortened),
-		EPD(epd), TempSensor(temp_sensor)
+		Adafruit_GFX(pixel_width, min(pixel_height,HEIGHT_SHORTENED_PAGE)), //NOTE: The Adafruit_GFX lib is set to a minimal value
+		EPD(epd), TempSensor(temp_sensor),
+		pixel_width(pixel_width), pixel_height(pixel_height)
 	{
+
+    	pixel_height_shortened = min(pixel_height,HEIGHT_SHORTENED_PAGE);
+	
+        //Assumes divisor with no remainder....
+		vertical_pages   = pixel_height/pixel_height_shortened;
 		vertical_page = 0;
+
+        //Buffers are only a subset of the total frame. We call this a page.
+#if !defined(NO_OLD_BUFFER)
+    	old_image = new uint8_t[(pixel_width/8 * pixel_height_shortened)];
+    	assert( old_image );
+#endif
+    	new_image = new uint8_t[(pixel_width/8 * pixel_height_shortened)];
+    	assert( new_image );
 	}
 
 	void begin();
@@ -98,6 +105,7 @@ public:
 	
 	void clear_new_image();
 
+    //NOTE: There is also a height() from Adafruit_GFX
     int16_t real_height(void) {
         return pixel_height;
     }

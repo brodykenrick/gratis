@@ -24,7 +24,7 @@ void EPD_GFX::begin() {
 }
 
 void EPD_GFX::clear_new_image() {
-   	memset(this->new_image, 0, sizeof(this->new_image));
+   	memset(this->new_image, 0, pixel_width/8 * pixel_height_shortened);
 }
 
 void EPD_GFX::clear() {
@@ -39,7 +39,7 @@ void EPD_GFX::clear() {
 
 	// clear buffers to white
 #if !defined(NO_OLD_BUFFER)
-	memset(this->old_image, 0, sizeof(this->old_image));
+	memset(this->old_image, 0, pixel_width/8 * pixel_height_shortened);
 #endif
 	clear_new_image();
 
