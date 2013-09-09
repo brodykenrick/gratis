@@ -1,6 +1,7 @@
+Modified by Brody Kenrick to support partial screen updates (allowing for use on Arduino Uno with smaller SRAM).
+
 # gratis
 
-Modified by Brody Kenrick to support partial screne updates (allowing for use on Arduino Uno with smaller SRAM).
 
 ## Sketches
 
