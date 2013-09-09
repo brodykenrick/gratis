@@ -15,16 +15,12 @@
 
 #include <Arduino.h>
 #include <limits.h>
-
-//#include <Adafruit_GFX.h>
 #include <EPD.h>
-#include <S5813A.h>
-
 #include "EPD_GFX.h"
 
 
 void EPD_GFX::begin() {
-	int temperature = this->S5813A.read();
+	int temperature = this->TempSensor.read();
 
 	// erase display
 	this->EPD.begin();
@@ -39,7 +35,7 @@ void EPD_GFX::begin() {
 
 
 void EPD_GFX::display() {
-	int temperature = this->S5813A.read();
+	int temperature = this->TempSensor.read();
 
 	// erase old, display new
 	this->EPD.begin();

@@ -12,12 +12,21 @@
 // express or implied.  See the License for the specific language
 // governing permissions and limitations under the License.
 
+//Brody added support for embeded artists' display (temp sensor) via the preprocessor define EMBEDDED_ARTISTS
+
+
 #if !defined(EPD_GFX_H)
 #define EPD_GFX_H 1
 
 #include <Arduino.h>
 #include <EPD.h>
+//Temperature sensor
+#ifndef EMBEDDED_ARTISTS
 #include <S5813A.h>
+#else /* EMBEDDED_ARTISTS */
+#include <Wire.h>
+#include <LM75A.h>
+#endif /* EMBEDDED_ARTISTS */
 #include <Adafruit_GFX.h>
 
 
@@ -25,7 +34,12 @@ class EPD_GFX : public Adafruit_GFX {
 
 private:
 	EPD_Class &EPD;
-	S5813A_Class &S5813A;
+#ifndef EMBEDDED_ARTISTS
+	S5813A_Class &TempSensor;
+#else /* EMBEDDED_ARTISTS */
+    LM75A_Class &TempSensor;
+#endif /* EMBEDDED_ARTISTS */
+	
 
 	static const int pixel_width = 200;  // must be a multiple of 8
 	static const int pixel_height = 96;
@@ -43,9 +57,14 @@ public:
 	};
 
 	// constructor
-	EPD_GFX(EPD_Class &epd, S5813A_Class &s5813a) :
+#ifndef EMBEDDED_ARTISTS
+	EPD_GFX(EPD_Class &epd, S5813A_Class &temp_sensor) :
+#else /* EMBEDDED_ARTISTS */
+	EPD_GFX(EPD_Class &epd, LM75A_Class &temp_sensor) :
+#endif /* EMBEDDED_ARTISTS */
 		Adafruit_GFX(this->pixel_width, this->pixel_height),
-		EPD(epd), S5813A(s5813a) {
+		EPD(epd), TempSensor(temp_sensor)
+	{
 	}
 
 	void begin();
