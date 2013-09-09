@@ -38,32 +38,35 @@ void EPD_GFX::clear() {
 
 
 	// clear buffers to white
-#if !defined(NO_OLD_BUFFER)
-	memset(this->old_image, 0, pixel_width/8 * pixel_height_shortened);
-#endif
 	clear_new_image();
-
 }
 
 
-void EPD_GFX::display() {
+void EPD_GFX::display(boolean clear_first = true, int stage = -1) {
 	int temperature = this->TempSensor.read();
 
 	// erase old, display new
 	this->EPD.begin();
 	this->EPD.setFactor(temperature);
-#if !defined(NO_OLD_BUFFER)
-	this->EPD.image_sram(this->old_image, this->new_image, vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
-#else
-    this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
-	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
-#endif
-	this->EPD.end();
+	if(stage == -1)
+	{
+	    //No stage .. so do internal repeats
+	    if(clear_first)
+	    {
+            this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
+        }
+    	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
+    }
+    else
+    {
+	    if(clear_first)
+	    {
+            this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
+        }
+    	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
+    }
 
-#if !defined(NO_OLD_BUFFER)
-	// copy new over to old
-	memcpy(this->old_image, this->new_image, sizeof(this->old_image));
-#endif
+	this->EPD.end();
 }
 
 // Draw a character

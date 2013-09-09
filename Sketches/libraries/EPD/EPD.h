@@ -122,6 +122,24 @@ public:
 		this->frame_sram_repeat(new_image, EPD_inverse, first_line_no, line_count);
 		this->frame_sram_repeat(new_image, EPD_normal, first_line_no, line_count);
 	}
+	//stage is 0..3 representing the stages in the update process
+	void image_sram_external_repeat(const uint8_t *old_image, const uint8_t *new_image, uint8_t stage, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+	    switch(stage)
+	    {
+    	    case EPD_compensate:
+    		    this->frame_sram(old_image, EPD_compensate, first_line_no, line_count);
+	    	    break;
+            case EPD_white:
+	        	this->frame_sram(old_image, EPD_white, first_line_no, line_count);
+	    	    break;
+	        case EPD_inverse:
+        		this->frame_sram(new_image, EPD_inverse, first_line_no, line_count);
+	    	    break;
+	        case EPD_normal:
+        		this->frame_sram(new_image, EPD_normal, first_line_no, line_count);
+	    	    break;
+		}
+	}
 #endif
 
 	// Low level API calls

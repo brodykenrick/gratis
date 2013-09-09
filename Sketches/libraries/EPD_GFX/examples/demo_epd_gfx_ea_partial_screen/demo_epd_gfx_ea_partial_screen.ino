@@ -232,6 +232,9 @@ void setup() {
 static int counter = 0;
 // main loop
 void loop() {
+        int location = 0;
+        long start_loop_ms = millis();
+  
 	int h = G_EPD.real_height();
 	int hp = G_EPD.height();
 	int w = G_EPD.width();
@@ -247,12 +250,24 @@ void loop() {
 	Serial.println(w);
         Serial.flush();
         
+        //Always cleared before we get here.
+        //4 stages....
+        //for(int s=0; s < 4; s++)
+        for(int s=0; s < 1; s++)
+        {
+          Serial.print("Stage ");Serial.println( s );Serial.flush();
         for(int i=0; i < vertical_pages; i++)
         {
+          Serial.print(location++);
+          Serial.print(":Milliseconds=");
+          Serial.println( millis() );
+          Serial.flush();
+
           int starting_row_this_page = i * hp;
           Serial.print("Vertical Page ");Serial.println( i );Serial.flush();
           G_EPD.set_vertical_page(i);
-          Serial.println("Drawing Rect.");Serial.flush();
+          Serial.print("Drawing:");Serial.flush();
+          Serial.print(" Rect.");Serial.flush();
           //Rectangle only on page 0
           //Optimise a little by only executing on the first page
           if (i == 0)
@@ -264,11 +279,11 @@ void loop() {
           //We could limit to just the pages it is on -- but we can also just call for each page (at the cost of wasted drawPixels that do nothing useful)
           G_EPD.drawRect((counter + w/5)%(w/2), hp/2, w/3, h/2, EPD_GFX::BLACK);
         
-          Serial.println("Drawing Line.");Serial.flush();
+          Serial.print(" Line.");Serial.flush();
           //Vertical line down entire screen
           G_EPD.drawLine( w*3/4, 0, w*3/4, h-1, EPD_GFX::BLACK);   //This is inclusive so has dest pixels inside the border
 
-          Serial.println("Text.");Serial.flush();
+          Serial.print(" Text1.");Serial.flush();
           //Write text on a few pages
           if(vertical_pages>=3)
           {
@@ -280,12 +295,13 @@ void loop() {
               int char_size_multiplier = 2;
               for (int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
               {
-                  Serial.print("Letter=");Serial.println( temp[j] );Serial.flush();
+                  //Serial.print("Letter=");Serial.println( temp[j] );Serial.flush();
                   G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
               }
             }
           }
- 
+
+          Serial.print(" Text2.");Serial.flush(); 
           //Write text across pages
           {
             char temp[] = "Across";
@@ -294,20 +310,30 @@ void loop() {
             int char_size_multiplier = 6;
             for (int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
             {
-                Serial.print("Letter=");Serial.println( temp[j] );Serial.flush();
+                //Serial.print("Letter=");Serial.println( temp[j] );Serial.flush();
                 G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
     	    }
           }
-  
-          Serial.println( "Display this page" );
+          Serial.println();Serial.flush();
+          
+          Serial.print(location++);
+          Serial.print(":Milliseconds=");
+          Serial.println( millis() );
           Serial.flush();
+  
+          Serial.print( "Display page " );Serial.println( i );Serial.flush();
           // update the display
-  	  G_EPD.display( );
+  	  G_EPD.display( false, -1 );
+        }
         }
         counter++;        counter++;        counter++;        counter++;        counter++;
         
-          Serial.println( "Finished loop" );
-          Serial.flush();
+        Serial.println( "Finished loop" );Serial.flush();
+        
+        Serial.print(location++);
+        Serial.print(":Milliseconds=");
+        Serial.println( millis() );
+        Serial.flush();
 
 	// flash LED for a number of seconds
 	for (int x = 0; x < LOOP_DELAY_SECONDS * 10; ++x)
@@ -318,7 +344,21 @@ void loop() {
 		  delay(50);
 	}
 
+        Serial.print(location++);
+        Serial.print(":Milliseconds=");
+        Serial.println( millis() );
+        Serial.flush();
+
 	Serial.println("Clearing.");Serial.flush();        
       	G_EPD.clear( );
+      
+        Serial.print(location++);
+        Serial.print(":Milliseconds=");
+        Serial.println( millis() );
+        Serial.flush();
+
+        Serial.print("Loop took ");
+        Serial.println( millis() - start_loop_ms );
+        Serial.flush();        
 }
 

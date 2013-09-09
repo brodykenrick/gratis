@@ -34,7 +34,7 @@
 
 #include <Adafruit_GFX.h>
 
-#define NO_OLD_BUFFER //!< Always do a full clear (and not a transition from the old buffer) -- slower but less SRAM used.
+//NOTE: We always do a full clear (and not a transition from the old buffer) -- slower but less SRAM used.
 #define HEIGHT_SHORTENED_PAGE (22) //<! Later make this some calculation in the constructor (based on passed in memory usage requests....)
 
 class EPD_GFX : public Adafruit_GFX {
@@ -59,9 +59,6 @@ private:
 
 
     //Buffers are only a subset of the total frame. We call this a page.
-#if !defined(NO_OLD_BUFFER)
-	uint8_t * old_image;
-#endif
 	uint8_t * new_image;
 
 	EPD_GFX(EPD_Class&);  // disable copy constructor
@@ -92,10 +89,6 @@ public:
 		vertical_page = 0;
 
         //Buffers are only a subset of the total frame. We call this a page.
-#if !defined(NO_OLD_BUFFER)
-    	old_image = new uint8_t[(pixel_width/8 * pixel_height_shortened)];
-    	assert( old_image );
-#endif
     	new_image = new uint8_t[(pixel_width/8 * pixel_height_shortened)];
     	assert( new_image );
 	}
@@ -148,7 +141,7 @@ public:
 	}
 
 	// Change old image to new image
-	void display();
+	void display(boolean, int);
 	void clear();
     void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size);
