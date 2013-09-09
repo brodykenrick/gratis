@@ -24,8 +24,11 @@
 #include <avr/pgmspace.h>
 #endif
 
+#define EPD_PARTIAL_SCREEN_SRAM
 // if more SRAM available (8 kBytes)
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega_2560__)
+#define EPD_ENABLE_EXTRA_SRAM 1
+#elif defined(EPD_PARTIAL_SCREEN_SRAM)
 #define EPD_ENABLE_EXTRA_SRAM 1
 #endif
 
@@ -80,37 +83,44 @@ public:
 	}
 
 	// clear display (anything -> white)
-	void clear() {
-		this->frame_fixed_repeat(0xff, EPD_compensate);
-		this->frame_fixed_repeat(0xff, EPD_white);
-		this->frame_fixed_repeat(0xaa, EPD_inverse);
-		this->frame_fixed_repeat(0xaa, EPD_normal);
+	void clear(uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_fixed_repeat(0xff, EPD_compensate, first_line_no, line_count);
+		this->frame_fixed_repeat(0xff, EPD_white, first_line_no, line_count);
+		this->frame_fixed_repeat(0xaa, EPD_inverse, first_line_no, line_count);
+		this->frame_fixed_repeat(0xaa, EPD_normal, first_line_no, line_count);
 	}
 
 	// assuming a clear (white) screen output an image (PROGMEM data)
-	void image(PROGMEM const uint8_t *image) {
-		this->frame_fixed_repeat(0xaa, EPD_compensate);
-		this->frame_fixed_repeat(0xaa, EPD_white);
-		this->frame_data_repeat(image, EPD_inverse);
-		this->frame_data_repeat(image, EPD_normal);
+	void image(PROGMEM const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
+		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
+		this->frame_data_repeat(image, EPD_inverse, first_line_no, line_count);
+		this->frame_data_repeat(image, EPD_normal, first_line_no, line_count);
 	}
 
 	// change from old image to new image (PROGMEM data)
-	void image(PROGMEM const uint8_t *old_image, PROGMEM const uint8_t *new_image) {
-		this->frame_data_repeat(old_image, EPD_compensate);
-		this->frame_data_repeat(old_image, EPD_white);
-		this->frame_data_repeat(new_image, EPD_inverse);
-		this->frame_data_repeat(new_image, EPD_normal);
+	void image(PROGMEM const uint8_t *old_image, PROGMEM const uint8_t *new_image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_data_repeat(old_image, EPD_compensate, first_line_no, line_count);
+		this->frame_data_repeat(old_image, EPD_white, first_line_no, line_count);
+		this->frame_data_repeat(new_image, EPD_inverse, first_line_no, line_count);
+		this->frame_data_repeat(new_image, EPD_normal, first_line_no, line_count);
 	}
 
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 
+	// assuming a clear (white) screen output an image (SRAM version)
+	void image_sram(const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
+		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
+		this->frame_sram_repeat(image, EPD_inverse, first_line_no, line_count);
+		this->frame_sram_repeat(image, EPD_normal, first_line_no, line_count);
+	}
 	// change from old image to new image (SRAM version)
-	void image_sram(const uint8_t *old_image, const uint8_t *new_image) {
-		this->frame_sram_repeat(old_image, EPD_compensate);
-		this->frame_sram_repeat(old_image, EPD_white);
-		this->frame_sram_repeat(new_image, EPD_inverse);
-		this->frame_sram_repeat(new_image, EPD_normal);
+	void image_sram(const uint8_t *old_image, const uint8_t *new_image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_sram_repeat(old_image, EPD_compensate, first_line_no, line_count);
+		this->frame_sram_repeat(old_image, EPD_white, first_line_no, line_count);
+		this->frame_sram_repeat(new_image, EPD_inverse, first_line_no, line_count);
+		this->frame_sram_repeat(new_image, EPD_normal, first_line_no, line_count);
 	}
 #endif
 
@@ -118,27 +128,28 @@ public:
 	// ===================
 
 	// single frame refresh
-	void frame_fixed(uint8_t fixed_value, EPD_stage stage);
-	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage);
+	void frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-	void frame_sram(const uint8_t *new_image, EPD_stage stage);
+	void frame_sram(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 #endif
-	void frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage);
+	void frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+
 
 	// stage_time frame refresh
-	void frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage);
-	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage);
+	void frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-	void frame_sram_repeat(const uint8_t *new_image, EPD_stage stage);
+	void frame_sram_repeat(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 #endif
-	void frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage);
+	void frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 
 	// convert temperature to compensation factor
 	int temperature_to_factor_10x(int temperature);
 
 	// single line display - very low-level
 	// also has to handle AVR progmem
-	void line(uint16_t line, const uint8_t *data, uint8_t fixed_value, bool read_progmem, EPD_stage stage);
+	void line(uint16_t line_no, const uint8_t *data, uint8_t fixed_value, bool read_progmem, EPD_stage stage);
 
 	// inline static void attachInterrupt();
 	// inline static void detachInterrupt();

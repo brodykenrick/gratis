@@ -374,43 +374,59 @@ int EPD_Class::temperature_to_factor_10x(int temperature) {
 // the image is arranged by line which matches the display size
 // so smallest would have 96 * 32 bytes
 
-void EPD_Class::frame_fixed(uint8_t fixed_value, EPD_stage stage) {
-	for (uint8_t line = 0; line < this->lines_per_display ; ++line) {
+void EPD_Class::frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
+    if(line_count == 0)
+    {
+        line_count = this->lines_per_display;
+    }
+	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
 		this->line(line, 0, fixed_value, false, stage);
 	}
 }
 
 
-void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage){
-	for (uint8_t line = 0; line < this->lines_per_display ; ++line) {
-		this->line(line, &image[line * this->bytes_per_line], 0, true, stage);
+void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count){
+    if(line_count == 0)
+    {
+        line_count = this->lines_per_display;
+    }
+	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
+		this->line(line, &image[(line - first_line_no) * this->bytes_per_line], 0, true, stage);
 	}
 }
 
 
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-void EPD_Class::frame_sram(const uint8_t *image, EPD_stage stage){
-	for (uint8_t line = 0; line < this->lines_per_display ; ++line) {
-		this->line(line, &image[line * this->bytes_per_line], 0, false, stage);
+void EPD_Class::frame_sram(const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count){
+    if(line_count == 0)
+    {
+        line_count = this->lines_per_display;
+    }
+	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
+		this->line(line, &image[(line - first_line_no) * this->bytes_per_line], 0, false, stage);
 	}
 }
 #endif
 
 
-void EPD_Class::frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage) {
-	static uint8_t buffer[264 / 8];
-	for (uint8_t line = 0; line < this->lines_per_display; ++line) {
-		reader(buffer, address + line * this->bytes_per_line, this->bytes_per_line);
+void EPD_Class::frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
+	static uint8_t buffer[264 / 8]; //Look at size here with line ranges in play....
+    if(line_count == 0)
+    {
+        line_count = this->lines_per_display;
+    }
+	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
+		reader(buffer, address + (line - first_line_no) * this->bytes_per_line, this->bytes_per_line);
 		this->line(line, buffer, 0, false, stage);
 	}
 }
 
 
-void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage) {
+void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
 	long stage_time = this->factored_stage_time;
 	do {
 		unsigned long t_start = millis();
-		this->frame_fixed(fixed_value, stage);
+		this->frame_fixed(fixed_value, stage, first_line_no, line_count);
 		unsigned long t_end = millis();
 		if (t_end > t_start) {
 			stage_time -= t_end - t_start;
@@ -421,11 +437,11 @@ void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage) {
 }
 
 
-void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage) {
+void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
 	long stage_time = this->factored_stage_time;
 	do {
 		unsigned long t_start = millis();
-		this->frame_data(image, stage);
+		this->frame_data(image, stage, first_line_no, line_count);
 		unsigned long t_end = millis();
 		if (t_end > t_start) {
 			stage_time -= t_end - t_start;
@@ -437,11 +453,11 @@ void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage)
 
 
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage) {
+void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
 	long stage_time = this->factored_stage_time;
 	do {
 		unsigned long t_start = millis();
-		this->frame_sram(image, stage);
+		this->frame_sram(image, stage, first_line_no, line_count);
 		unsigned long t_end = millis();
 		if (t_end > t_start) {
 			stage_time -= t_end - t_start;
@@ -453,11 +469,11 @@ void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage) {
 #endif
 
 
-void EPD_Class::frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage) {
+void EPD_Class::frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
 	long stage_time = this->factored_stage_time;
 	do {
 		unsigned long t_start = millis();
-		this->frame_cb(address, reader, stage);
+		this->frame_cb(address, reader, stage, first_line_no, line_count);
 		unsigned long t_end = millis();
 		if (t_end > t_start) {
 			stage_time -= t_end - t_start;
