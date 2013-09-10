@@ -30,8 +30,6 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-//#include "Stopwatch.h"
-
 // required libraries
 #include <SPI.h>
 #ifndef EMBEDDED_ARTISTS
@@ -77,10 +75,15 @@
 //Note: This include is affected by EMBEDDED_ARTISTS define
 #include <EPD_GFX.h>
 
+#define PROFILE
+#if defined(PROFILE)
+#include "Stopwatch.h"
+#endif //defined(PROFILE)
 
-// update delay in seconds
-#define LOOP_DELAY_SECONDS 10
+// Update delay in seconds
+#define LOOP_DELAY_SECONDS (10)
 
+#define VERBOSE
 
 // current version number
 #define DEMO_VERSION "1"
@@ -195,7 +198,7 @@ void setup() {
 	}
 #endif
 	Serial.println();
-	Serial.println();
+	Serial.println("EPD_GFX Partial Screen Demo.");
 	Serial.println("Version: " DEMO_VERSION);
 	Serial.println("Display: " MAKE_STRING(EPD_SIZE));
 	Serial.println();
@@ -212,6 +215,7 @@ void setup() {
 	S5813A.begin(Pin_TEMPERATURE);
 #endif /* ! EMBEDDED_ARTISTS */
 
+#if defined(VERBOSE)
 	// get the current temperature
 #ifndef EMBEDDED_ARTISTS
 	int temperature = S5813A.read();
@@ -229,23 +233,37 @@ void setup() {
         Serial.print("Memory (SRAM) allocated in display = ");
         Serial.print( G_EPD.get_segment_buffer_size_bytes() );
         Serial.println(" bytes.");
+#endif //defined(VERBOSE)
 
 	// set up graphics EPD library
 	// and clear the screen
 	G_EPD.begin();
+#if defined(VERBOSE)
         Serial.println( "Screen cleared." );
+#endif //defined(VERBOSE)
 }
+
+#if defined(PROFILE)
+CStopwatch stopwatch_loop_overall("LoopOverall");
+CStopwatch stopwatch_loop_excl_delay_clear("LoopExclDelayClear");
+CStopwatch stopwatch_loop_display_only("LoopDisplayOnly");
+CStopwatch stopwatch_loop_draw_only("LoopDrawOnly");
+#endif //defined(PROFILE)
 
 static int counter = 0;
 // main loop
 void loop() {
-        long start_loop_ms = millis();
-  
+#if defined(PROFILE)
+        stopwatch_loop_overall.Start();
+        stopwatch_loop_excl_delay_clear.Start();
+#endif //defined(PROFILE)
+        
 	int h        = G_EPD.real_height();
 	int seg_h    = G_EPD.height();
 	int w        = G_EPD.width();
         unsigned int segments = G_EPD.get_segment_count();
 
+#if defined(VERBOSE)
 	Serial.print("Height=");
 	Serial.print(h);
 	Serial.print(" (with ");
@@ -254,19 +272,29 @@ void loop() {
 	Serial.print(seg_h);
 	Serial.print(") : Width=");
 	Serial.println(w);
-        
+#endif //defined(VERBOSE)        
         
         //Always cleared before we get here.
+#if defined(VERBOSE)
         Serial.println( "-----------------------------------------------" );
+#endif //defined(VERBOSE)
 
         for(unsigned int s=0; s < segments; s++)
         {
+#if defined(PROFILE)
+          stopwatch_loop_draw_only.Start();
+#endif //defined(PROFILE)
           int starting_row_this_segment = s * seg_h;
+#if defined(VERBOSE)
           Serial.print( "Segment " );Serial.print( s );
           Serial.print(" | ");
+#endif //defined(VERBOSE)
+
           G_EPD.set_current_segment(s);
+#if defined(VERBOSE)
           Serial.print("Drawing:");
           Serial.print(" Rect.");
+#endif //defined(VERBOSE)
           //Rectangle only on segment 0. Make it slide across the screen on each loop
           //Optimise a little by only executing on the first segment
           if (s == 0)
@@ -277,12 +305,15 @@ void loop() {
           //Rectangle in middle of screen across segments
           //We could limit to just the segments it is on -- but we can also just call for each segment (at the cost of wasted drawPixels that do nothing useful)
           G_EPD.drawRect((counter + w/5)%(w/2), seg_h/2, w/3, h/2, EPD_GFX::BLACK);
-        
+#if defined(VERBOSE)
           Serial.print(" Line.");
+#endif //defined(VERBOSE)
           //Vertical line down entire screen
           G_EPD.drawLine( w*3/4, 0, w*3/4, h-1, EPD_GFX::BLACK);   //This is inclusive so has dest pixels inside the border
 
+#if defined(VERBOSE)
           Serial.print(" Text=");
+#endif //defined(VERBOSE)
           //Write text on a some segments (if big enough....)
           if(( s == 0 ) ||
             ((segments>=3) && (( s == (segments-2) ) || ( s == (segments-1) ))) ||
@@ -292,8 +323,10 @@ void loop() {
             if(seg_h >= EPD_GFX_CHAR_BASE_HEIGHT)
             {
               char temp[] = "Some";
+#if defined(VERBOSE)
               Serial.print(temp);
               Serial.print(".");
+#endif //defined(VERBOSE)
               unsigned int x = 2;
               unsigned int y = 1 + starting_row_this_segment; //Put on each segment
               unsigned int char_size_multiplier = (seg_h/EPD_GFX_CHAR_BASE_HEIGHT); //Make as big as we can
@@ -305,12 +338,17 @@ void loop() {
             }
           }
 
+#if defined(VERBOSE)
           Serial.print(" Text=");
+#endif //defined(VERBOSE)
+
           //Write text across segments
           {
             char temp[] = "Across";
+#if defined(VERBOSE)
             Serial.print(temp);
             Serial.print(".");
+#endif //defined(VERBOSE)
             unsigned int x = w/16;
             unsigned int y = h/6;
             unsigned int char_size_multiplier = 6;
@@ -320,23 +358,39 @@ void loop() {
                 G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
     	    }
           }
+#if defined(VERBOSE)
           Serial.println();
+#endif //defined(VERBOSE)
 
+#if defined(PROFILE)
+          stopwatch_loop_draw_only.Stop();
+#endif //defined(PROFILE)
+
+#if defined(PROFILE)
+          stopwatch_loop_display_only.Start();
+#endif //defined(PROFILE)
+
+#if defined(VERBOSE)
           Serial.print( "Display segment " );Serial.println( s );
+#endif //defined(VERBOSE)
           // Update the display -- first and last segments of a loop are indicated
           G_EPD.display( false, s==0, s==(segments-1) );
+#if defined(PROFILE)
+          stopwatch_loop_display_only.Stop();
+#endif //defined(PROFILE)
           
         }
         counter+=5;
-        
-//        Serial.println( "Finished loop" );
 
+#if defined(PROFILE)
+          stopwatch_loop_excl_delay_clear.Stop();
+#endif //defined(PROFILE)
+
+#if defined(VERBOSE)
         Serial.println( "++++++++++++++++++++++++++++++++++++++++++++++++++" );
-
-        Serial.print("Total display rendering in ms = ");
-        Serial.println( millis() - start_loop_ms );
-        
         Serial.println( "Delay with LED flashing." );
+#endif //defined(VERBOSE)
+
 
 	// flash LED for a number of seconds
 	for (int x = 0; x < LOOP_DELAY_SECONDS * 10; ++x)
@@ -346,9 +400,20 @@ void loop() {
 		  digitalWrite(Pin_RED_LED, LED_OFF);
 		  delay(50);
 	}
-
+#if defined(VERBOSE)
 	Serial.println("Clearing.");
+#endif //defined(VERBOSE)
+
       	G_EPD.clear( );
+#if defined(PROFILE)
+        stopwatch_loop_overall.Stop();
+#endif //defined(PROFILE)
+#if defined(PROFILE)
+        stopwatch_loop_overall.SerialPrint();
+        stopwatch_loop_excl_delay_clear.SerialPrint();
+        stopwatch_loop_draw_only.SerialPrint();
+        stopwatch_loop_display_only.SerialPrint();
+#endif //defined(PROFILE)
 }
 
 
