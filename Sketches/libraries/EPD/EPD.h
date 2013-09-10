@@ -111,6 +111,7 @@ public:
 
 	// assuming a clear (white) screen output an image (SRAM version)
 	void image_sram(const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+//BK - Want to turn this off.
 #if 0
         //BK - I expect this will affect the duration of the ink.....
         //BK - Speeds up the display though.

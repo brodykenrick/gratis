@@ -35,7 +35,10 @@
 #include <Adafruit_GFX.h>
 
 //NOTE: We always do a full clear (and not a transition from the old buffer) -- slower but less SRAM used.
-#define HEIGHT_SEGMENT_DEFAULT (22) //<! TODO: Later make this some calculation in the constructor (based on passed in memory usage requests....)
+#define EPD_GFX_HEIGHT_SEGMENT_DEFAULT (8) //<! 8 is a factor of 176(2.7") and 96(other screens). TODO: Later make this some calculation in the constructor (based on passed in memory usage requests....)
+
+#define EPD_GFX_CHAR_BASE_WIDTH  (5) //TODO: Bring out from font somehow??
+#define EPD_GFX_CHAR_BASE_HEIGHT (7) //TODO: Bring out from font somehow??
 
 class EPD_GFX : public Adafruit_GFX {
 
@@ -74,7 +77,7 @@ public:
 #else /* EMBEDDED_ARTISTS */
 	LM75A_Class &temp_sensor,
 #endif /* EMBEDDED_ARTISTS */
-    uint16_t pixel_height_segment = HEIGHT_SEGMENT_DEFAULT ):
+    uint16_t pixel_height_segment = EPD_GFX_HEIGHT_SEGMENT_DEFAULT ):
 		Adafruit_GFX(pixel_width, min(pixel_height,pixel_height_segment)), //NOTE: The Adafruit_GFX lib is set to the minimal value
 		EPD(epd), TempSensor(temp_sensor),
 		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_segment(pixel_height_segment)
@@ -85,9 +88,14 @@ public:
 		current_segment = 0;
 
         //Buffer is only a subset of the total frame. We call this a segment.
-    	new_image = new uint8_t[(pixel_width/8 * pixel_height_segment)];
+    	new_image = new uint8_t[  get_segment_buffer_size_bytes() ];
     	assert( new_image );
 	}
+	
+	uint16_t get_segment_buffer_size_bytes() 
+    {
+        return (pixel_width/8 * pixel_height_segment);
+    }
 
 	void begin();
 	void end();

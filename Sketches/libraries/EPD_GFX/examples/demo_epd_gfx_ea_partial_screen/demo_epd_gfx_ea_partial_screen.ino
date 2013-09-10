@@ -15,7 +15,8 @@
 // governing permissions and limitations under the License.
 
 
-// Quick update of whole display using partial scren segments
+// Brody Kenrick
+// Quick demo of updating of whole display using partial screen segments
 
 // Operation from reset:
 // * display version
@@ -139,9 +140,10 @@ EPD_Class EPD(EPD_SIZE, Pin_PANEL_ON, Pin_BORDER, Pin_DISCHARGE, Pin_PWM, Pin_RE
 LM75A_Class LM75A;
 #endif /* EMBEDDED_ARTISTS */
 
-#define HEIGHT_OF_SEGMENT (22) //<!Proportional to the memory used and inversely proportional to prcessing to display (and also adds delay). If your Arduino hangs at startup reduce this...
+
+#define HEIGHT_OF_SEGMENT (16) //<!Proportional to the memory used and inversely proportional to prcessing to display (and also has visual impact adds some delay). If your Arduino hangs at startup reduce this (BUT must be a factor of the screne size)...
 // Graphic handler
-//TODO: Move this into setup/loop so that we can create a visible error
+//TODO: Move this into setup/loop so that we can create a visible error if we run out of memory
 #ifndef EMBEDDED_ARTISTS
 EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, S5813A, HEIGHT_OF_SEGMENT);
 #else /* EMBEDDED_ARTISTS */
@@ -220,13 +222,17 @@ void setup() {
 	Serial.print(temperature);
 	Serial.println(" Celcius");
 
-        Serial.print("availableMemory() = ");
-        Serial.println(availableMemory());
+        Serial.print("Memory (SRAM) available = ");
+        Serial.print(availableMemory());
+        Serial.println(" bytes.");
+        
+        Serial.print("Memory (SRAM) allocated in display = ");
+        Serial.print( G_EPD.get_segment_buffer_size_bytes() );
+        Serial.println(" bytes.");
 
 	// set up graphics EPD library
 	// and clear the screen
 	G_EPD.begin();
-
         Serial.println( "Screen cleared." );
 }
 
@@ -236,57 +242,62 @@ void loop() {
         long start_loop_ms = millis();
   
 	int h        = G_EPD.real_height();
-	int hp       = G_EPD.height();
+	int seg_h    = G_EPD.height();
 	int w        = G_EPD.width();
-        int segments = G_EPD.get_segment_count();
+        unsigned int segments = G_EPD.get_segment_count();
 
-	Serial.print("H=");
+	Serial.print("Height=");
 	Serial.print(h);
 	Serial.print(" (with ");
 	Serial.print(segments);
 	Serial.print(" segments of ");
-	Serial.print(hp);
-	Serial.print(") : W=");
+	Serial.print(seg_h);
+	Serial.print(") : Width=");
 	Serial.println(w);
         
         
         //Always cleared before we get here.
         Serial.println( "-----------------------------------------------" );
 
-        for(int i=0; i < segments; i++)
+        for(unsigned int s=0; s < segments; s++)
         {
-          int starting_row_this_segment = i * hp;
-          Serial.print( "Segment " );Serial.print( i );
+          int starting_row_this_segment = s * seg_h;
+          Serial.print( "Segment " );Serial.print( s );
           Serial.print(" | ");
-          G_EPD.set_current_segment(i);
+          G_EPD.set_current_segment(s);
           Serial.print("Drawing:");
           Serial.print(" Rect.");
-          //Rectangle only on segment 0
+          //Rectangle only on segment 0. Make it slide across the screen on each loop
           //Optimise a little by only executing on the first segment
-          if (i == 0)
+          if (s == 0)
           {
-            G_EPD.drawRect(counter%(w/2), 0, w/2, hp, EPD_GFX::BLACK);
+            G_EPD.drawRect(counter%(w/2), 0, w/2, seg_h, EPD_GFX::BLACK);
           }
           
           //Rectangle in middle of screen across segments
           //We could limit to just the segments it is on -- but we can also just call for each segment (at the cost of wasted drawPixels that do nothing useful)
-          G_EPD.drawRect((counter + w/5)%(w/2), hp/2, w/3, h/2, EPD_GFX::BLACK);
+          G_EPD.drawRect((counter + w/5)%(w/2), seg_h/2, w/3, h/2, EPD_GFX::BLACK);
         
           Serial.print(" Line.");
           //Vertical line down entire screen
           G_EPD.drawLine( w*3/4, 0, w*3/4, h-1, EPD_GFX::BLACK);   //This is inclusive so has dest pixels inside the border
 
-          Serial.print(" Text1.");
-          //Write text on a few segments
-          if(segments>=3)
+          Serial.print(" Text=");
+          //Write text on a some segments (if big enough....)
+          if(( s == 0 ) ||
+            ((segments>=3) && (( s == (segments-2) ) || ( s == (segments-1) ))) ||
+            ((segments>=5) && (( s == (segments-3) ) || ( s == (segments-4) )))
+          )
           {
-            if(( i == 0 ) || ( i == (segments-2) ) || ( i == (segments-1) ))
+            if(seg_h >= EPD_GFX_CHAR_BASE_HEIGHT)
             {
-              char temp[] = "Each";
+              char temp[] = "Some";
+              Serial.print(temp);
+              Serial.print(".");
               unsigned int x = 2;
               unsigned int y = 1 + starting_row_this_segment; //Put on each segment
-              unsigned int char_size_multiplier = 2;
-              for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
+              unsigned int char_size_multiplier = (seg_h/EPD_GFX_CHAR_BASE_HEIGHT); //Make as big as we can
+              for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (EPD_GFX_CHAR_BASE_WIDTH + 1)))
               {
                   //Serial.print("Letter=");Serial.println( temp[j] );
                   G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
@@ -294,14 +305,16 @@ void loop() {
             }
           }
 
-          Serial.print(" Text2."); 
+          Serial.print(" Text=");
           //Write text across segments
           {
             char temp[] = "Across";
+            Serial.print(temp);
+            Serial.print(".");
             unsigned int x = w/16;
             unsigned int y = h/6;
             unsigned int char_size_multiplier = 6;
-            for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
+            for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (EPD_GFX_CHAR_BASE_WIDTH + 1)))
             {
                 //Serial.print("Letter=");Serial.println( temp[j] );
                 G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
@@ -309,12 +322,12 @@ void loop() {
           }
           Serial.println();
 
-          Serial.print( "Display segment " );Serial.println( i );
-          // update the display
-          G_EPD.display( false, i==0, i==(segments-1) );
+          Serial.print( "Display segment " );Serial.println( s );
+          // Update the display -- first and last segments of a loop are indicated
+          G_EPD.display( false, s==0, s==(segments-1) );
           
         }
-        counter++;        counter++;        counter++;        counter++;        counter++;
+        counter+=5;
         
 //        Serial.println( "Finished loop" );
 

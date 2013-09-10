@@ -15,7 +15,7 @@
 // governing permissions and limitations under the License.
 
 
-// graphic temperature display
+// Graphic Temperature Display
 
 // Operation from reset:
 // * display version
@@ -143,11 +143,13 @@ LM75A_Class LM75A;
 #endif /* EMBEDDED_ARTISTS */
 
 
-// graphic handler
+#define HEIGHT_OF_SEGMENT (16) //<!Proportional to the memory used and inversely proportional to prcessing to display (and also has visual impact adds some delay). If your Arduino hangs at startup reduce this (BUT must be a factor of the screne size)...
+// Graphic handler
+//TODO: Move this into setup/loop so that we can create a visible error if we run out of memory
 #ifndef EMBEDDED_ARTISTS
-EPD_GFX G_EPD(EPD, S5813A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, S5813A, HEIGHT_OF_SEGMENT);
 #else /* EMBEDDED_ARTISTS */
-EPD_GFX G_EPD(EPD, LM75A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, LM75A, HEIGHT_OF_SEGMENT);
 #endif /* EMBEDDED_ARTISTS */
 
 // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
@@ -222,8 +224,13 @@ void setup() {
 	Serial.print(temperature);
 	Serial.println(" Celcius");
 
-        Serial.print("availableMemory() = ");
-        Serial.println(availableMemory());
+        Serial.print("Memory (SRAM) available = ");
+        Serial.print(availableMemory());
+        Serial.println(" bytes.");
+        
+        Serial.print("Memory (SRAM) allocated in display = ");
+        Serial.print( G_EPD.get_segment_buffer_size_bytes() );
+        Serial.println(" bytes.");
 
 	// set up graphics EPD library
 	// and clear the screen
@@ -235,6 +242,7 @@ void setup() {
 
 // main loop
 void loop() {
+        long start_loop_ms = millis();
 #ifndef EMBEDDED_ARTISTS
         int temperature = S5813A.read();
 #else /* EMBEDDED_ARTISTS */
@@ -245,93 +253,100 @@ void loop() {
 	Serial.print(temperature);
 	Serial.println(" Celcius");
   
-	int h  = G_EPD.real_height();
-	int hp = G_EPD.height();
-	int w  = G_EPD.width();
-    int vertical_pages = G_EPD.vertical_pages;
+	int h        = G_EPD.real_height();
+	int seg_h    = G_EPD.height();
+	int w        = G_EPD.width();
+        unsigned int segments = G_EPD.get_segment_count();
 
-	Serial.print("H=");
+	Serial.print("Height=");
 	Serial.print(h);
 	Serial.print(" (with ");
-	Serial.print(vertical_pages);
-	Serial.print(" pages of ");
-	Serial.print(hp);
-	Serial.print(") : W=");
+	Serial.print(segments);
+	Serial.print(" segments of ");
+	Serial.print(seg_h);
+	Serial.print(") : Width=");
 	Serial.println(w);
         
-    //We loop across each of the pages (vertical split).
-    for(int i=0; i < vertical_pages; i++)
-    {
-      Serial.print("Vertical Page ");Serial.println( i );
-      G_EPD.set_vertical_page(i);
+        //Always cleared before we get here.
+        Serial.println( "-----------------------------------------------" );
 
-      //Below is the original thermo code
-      G_EPD.drawRect(1, 1, w - 2, h - 2, EPD_GFX::BLACK);
-      G_EPD.drawRect(3, 3, w - 6, h - 6, EPD_GFX::BLACK);
+        for(unsigned int s=0; s < segments; s++)
+        {
+          Serial.print( "Segment " );Serial.print( s );
+          Serial.print(" | ");
+          G_EPD.set_current_segment(s);
 
-      //Note -these are not proportionally to the screen size.
+          //Below is the original thermo code
+          G_EPD.drawRect(1, 1, w - 2, h - 2, EPD_GFX::BLACK);
+          G_EPD.drawRect(3, 3, w - 6, h - 6, EPD_GFX::BLACK);
+
+          //Note -these are not proportionally to the screen size.
   	  G_EPD.fillTriangle(135,20, 186,40, 152,84, EPD_GFX::BLACK);
   	  G_EPD.fillTriangle(139,26, 180,44, 155,68, EPD_GFX::WHITE);
 
-  	char temp[sizeof("-999 C")];
-  	snprintf(temp, sizeof(temp), "%4d C", temperature);
+  	  char temp[sizeof("-999 C")];
+  	  snprintf(temp, sizeof(temp), "%4d C", temperature);
   
-  	int x = 20;
-  	int y = 30;
-  	for (int i = 0; i < sizeof(temp) - 1; ++i, x += 14) {
-  		G_EPD.drawChar(x, y, temp[i], EPD_GFX::BLACK, EPD_GFX::WHITE, 2);
-  	}
+          int x = 20;
+          int y = 30;
+          for (unsigned int i = 0; i < sizeof(temp) - 1; ++i, x += 14) {
+              G_EPD.drawChar(x, y, temp[i], EPD_GFX::BLACK, EPD_GFX::WHITE, 2);
+          }
   
-  	// small circle for degrees symbol
-  	G_EPD.drawCircle(20 + 4 * 14 + 6, 30, 4, EPD_GFX::BLACK);
+          // small circle for degrees symbol
+          G_EPD.drawCircle(20 + 4 * 14 + 6, 30, 4, EPD_GFX::BLACK);
 
   // 100 difference just to simplify things
   // so 1 pixel = 1 degree
   #define T_MIN (-10)
   #define T_MAX 80
   
-  	// clip
-  	if (temperature < T_MIN) {
+          // clip
+          if (temperature < T_MIN) {
   		temperature= T_MIN;
-  	} else if (temperature > T_MAX) {
+          } else if (temperature > T_MAX) {
   		temperature = T_MAX;
-  	}
+          }
   
-  	// temperature bar
-  	int bar_w = temperature - T_MIN;  // zero based
-  	int bar_h = 4;
-  	int bar_x0 = 24;
-  	int bar_y0 = 60;
+          // temperature bar
+          int bar_w = temperature - T_MIN;  // zero based
+          int bar_h = 4;
+          int bar_x0 = 24;
+          int bar_y0 = 60;
   
-  	G_EPD.fillRect(bar_x0, bar_y0, T_MAX - T_MIN, bar_h, EPD_GFX::WHITE);
-  	G_EPD.fillRect(bar_x0, bar_y0, bar_w, bar_h, EPD_GFX::BLACK);
+          G_EPD.fillRect(bar_x0, bar_y0, T_MAX - T_MIN, bar_h, EPD_GFX::WHITE);
+          G_EPD.fillRect(bar_x0, bar_y0, bar_w, bar_h, EPD_GFX::BLACK);
   
-  	// scale
-  	for (int t0 = T_MIN; t0 < T_MAX; t0 += 5) {
-  		int t = t0 - T_MIN;
-  		int tick = 8;
-  		if (0 == t0) {
-  			tick = 12;
-  			G_EPD.drawCircle(bar_x0 + t, bar_y0 + 16, 3, EPD_GFX::BLACK);
-  		} else if (0 == t0 % 10) {
-  			tick = 10;
-  		}
-  		G_EPD.drawLine(bar_x0 + t, bar_y0 + tick, bar_x0 + t, bar_y0 + 6, EPD_GFX::BLACK);
-  		G_EPD.drawLine(bar_x0 + t, bar_y0 + 6, bar_x0 + t + 5, bar_y0 + 6, EPD_GFX::BLACK);
-  		G_EPD.drawLine(bar_x0 + t + 5, bar_y0 + 6, bar_x0 + t + 5, bar_y0 + 8, EPD_GFX::BLACK);
-  	}
+          // scale
+          for (int t0 = T_MIN; t0 < T_MAX; t0 += 5) {
+          	int t = t0 - T_MIN;
+          	int tick = 8;
+          	if (0 == t0) {
+          		tick = 12;
+          		G_EPD.drawCircle(bar_x0 + t, bar_y0 + 16, 3, EPD_GFX::BLACK);
+          	} else if (0 == t0 % 10) {
+          		tick = 10;
+          	}
+          	G_EPD.drawLine(bar_x0 + t, bar_y0 + tick, bar_x0 + t, bar_y0 + 6, EPD_GFX::BLACK);
+          	G_EPD.drawLine(bar_x0 + t, bar_y0 + 6, bar_x0 + t + 5, bar_y0 + 6, EPD_GFX::BLACK);
+          	G_EPD.drawLine(bar_x0 + t + 5, bar_y0 + 6, bar_x0 + t + 5, bar_y0 + 8, EPD_GFX::BLACK);
+          }
 
-        Serial.println( "Display this page" );
-        // update the display
-      	G_EPD.display( );
-        //Above is the original thermo code
+          Serial.print( "Display segment " );Serial.println( s );
+          // Update the display -- first and last segments of a loop are indicated
+          G_EPD.display( false, s==0, s==(segments-1) );
         }
+
+        Serial.println( "++++++++++++++++++++++++++++++++++++++++++++++++++" );
+
+        Serial.print("Total display rendering in ms = ");
+        Serial.println( millis() - start_loop_ms );
         
-        Serial.println( "Finished loop" );
+        Serial.println( "Delay with LED flashing." );
 
 	// flash LED for a number of seconds
-    for (int x = 0; x < LOOP_DELAY_SECONDS * 10; ++x)
-    {
+        for (int x = 0; x < LOOP_DELAY_SECONDS * 10; ++x)
+        {
 		  digitalWrite(Pin_RED_LED, LED_ON);
 		  delay(50);
 		  digitalWrite(Pin_RED_LED, LED_OFF);
@@ -339,6 +354,6 @@ void loop() {
 	}
 
 	Serial.println("Clearing.");
-    G_EPD.clear( );
+        G_EPD.clear( );
 }
 

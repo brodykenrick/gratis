@@ -466,15 +466,6 @@ void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage, uint16_
     // So is it important for time? or number of times we write to the display......
     long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
 
-#if 0
-    Serial.print("frame_sram_repeat for ");
-    Serial.print( stage_time );
-    Serial.print("[mod ");
-    Serial.print( this->factored_stage_time );
-    Serial.print("] @ ");
-    Serial.println( millis() );
-#endif
-
 	do {
 		unsigned long t_start = millis();
 		this->frame_sram(image, stage, first_line_no, line_count);
