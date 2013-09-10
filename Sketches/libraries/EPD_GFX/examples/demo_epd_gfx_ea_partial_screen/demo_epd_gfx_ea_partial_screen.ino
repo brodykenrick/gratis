@@ -75,6 +75,10 @@
 //Note: This include is affected by EMBEDDED_ARTISTS define
 #include <EPD_GFX.h>
 
+//! Height in pixels of each segment in the EPD buffer. Proportional to the memory used and inversely proportional to processing to display. Also has visual impact and adds some delay in rendering.
+//!If your Arduino hangs at startup reduce this (BUT must be a factor of the screen size -- you can start with 1).
+#define HEIGHT_OF_SEGMENT (16)
+
 #define PROFILE
 #if defined(PROFILE)
 #include "Stopwatch.h"
@@ -144,7 +148,6 @@ LM75A_Class LM75A;
 #endif /* EMBEDDED_ARTISTS */
 
 
-#define HEIGHT_OF_SEGMENT (16) //<!Proportional to the memory used and inversely proportional to prcessing to display (and also has visual impact adds some delay). If your Arduino hangs at startup reduce this (BUT must be a factor of the screne size)...
 // Graphic handler
 //TODO: Move this into setup/loop so that we can create a visible error if we run out of memory
 #ifndef EMBEDDED_ARTISTS
@@ -154,7 +157,8 @@ EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, LM75A, HEIGHT_OF_SEGMENT);
 #endif /* EMBEDDED_ARTISTS */
 
 // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
-int availableMemory() {
+int availableMemory()
+{
     // Use 1024 with ATmega168
     int size = 2048;
     byte *buf;
