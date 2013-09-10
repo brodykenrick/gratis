@@ -35,7 +35,7 @@
 #include <Adafruit_GFX.h>
 
 //NOTE: We always do a full clear (and not a transition from the old buffer) -- slower but less SRAM used.
-#define HEIGHT_SHORTENED_PAGE (22) //<! Later make this some calculation in the constructor (based on passed in memory usage requests....)
+#define HEIGHT_SEGMENT_DEFAULT (22) //<! TODO: Later make this some calculation in the constructor (based on passed in memory usage requests....)
 
 class EPD_GFX : public Adafruit_GFX {
 
@@ -50,12 +50,12 @@ private:
 	
     uint16_t pixel_width;  // must be a multiple of 8
     uint16_t pixel_height;
-	uint16_t pixel_height_shortened;
+	uint16_t pixel_height_segment;
 
-	uint8_t         vertical_pages;
-	uint8_t         vertical_page;
+	uint8_t         total_segments;
+	uint8_t         current_segment;
 
-    //Buffers are only a subset of the total frame. We call this a page.
+    //Buffer for updating display
 	uint8_t * new_image;
 
 	EPD_GFX(EPD_Class&);  // disable copy constructor
@@ -74,18 +74,18 @@ public:
 #else /* EMBEDDED_ARTISTS */
 	LM75A_Class &temp_sensor,
 #endif /* EMBEDDED_ARTISTS */
-    uint16_t pixel_height_shortened = HEIGHT_SHORTENED_PAGE ):
-		Adafruit_GFX(pixel_width, min(pixel_height,pixel_height_shortened)), //NOTE: The Adafruit_GFX lib is set to the minimal value
+    uint16_t pixel_height_segment = HEIGHT_SEGMENT_DEFAULT ):
+		Adafruit_GFX(pixel_width, min(pixel_height,pixel_height_segment)), //NOTE: The Adafruit_GFX lib is set to the minimal value
 		EPD(epd), TempSensor(temp_sensor),
-		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_shortened(pixel_height_shortened)
+		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_segment(pixel_height_segment)
 	{
         //Assumes divisor with no remainder....
-        assert( (pixel_height%pixel_height_shortened) == 0);
-		vertical_pages   = pixel_height/pixel_height_shortened;
-		vertical_page = 0;
+        assert( (pixel_height%pixel_height_segment) == 0);
+		total_segments   = pixel_height/pixel_height_segment;
+		current_segment = 0;
 
-        //Buffers are only a subset of the total frame. We call this a page.
-    	new_image = new uint8_t[(pixel_width/8 * pixel_height_shortened)];
+        //Buffer is only a subset of the total frame. We call this a segment.
+    	new_image = new uint8_t[(pixel_width/8 * pixel_height_segment)];
     	assert( new_image );
 	}
 
@@ -99,31 +99,31 @@ public:
         return pixel_height;
     }
 
-    void set_vertical_page(int vp) 
+    void set_current_segment(int segment) 
     {
-        vertical_page = vp;
+        current_segment = segment;
         clear_new_image();
     }
 
-    uint16_t get_vertical_page_count() 
+    uint16_t get_segment_count() 
     {
-        return vertical_pages;
+        return total_segments;
     }
 
 	// set a single pixel in new_image
 	//NOTE: This is the trickery by which we get to limit the vertical size
-	//This function does not write to the buffer if the pixel is not on the current page
+	//This function does not write to the buffer if the pixel is not on the current segment
 	//VERY inefficient!
 	void drawPixel(int16_t x, int16_t y, unsigned int colour)
 	{
 	    assert(y>=0); //BK: Not sure why it is allowed to be negative......
         if(
-            ((uint16_t)y >= ( vertical_page    * this->pixel_height_shortened))
+            ((uint16_t)y >= ( current_segment    * this->pixel_height_segment))
             &&
-            ((uint16_t)y <  ((vertical_page+1) * this->pixel_height_shortened))
+            ((uint16_t)y <  ((current_segment+1) * this->pixel_height_segment))
         )
         {
-            y = (y % this->pixel_height_shortened); //Bring into 0..buffer_height size range
+            y = (y % this->pixel_height_segment); //Bring into 0..buffer_height size range
 	
 		    int bit = x & 0x07;
 		    int byte = x / 8 + y * (pixel_width / 8);
@@ -137,7 +137,7 @@ public:
 #if 0
         else
         {
-        	Serial.print("drawPixel -- not on page! @ ");Serial.println(y);
+        	Serial.print("drawPixel -- not in segment! @ ");Serial.println(y);
         }
 #endif
 	}

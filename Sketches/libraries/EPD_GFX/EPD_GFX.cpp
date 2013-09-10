@@ -24,7 +24,7 @@ void EPD_GFX::begin() {
 }
 
 void EPD_GFX::clear_new_image() {
-   	memset(this->new_image, 0, pixel_width/8 * pixel_height_shortened);
+   	memset(this->new_image, 0, pixel_width/8 * pixel_height_segment);
 }
 
 void EPD_GFX::clear() {
@@ -44,12 +44,8 @@ void EPD_GFX::clear() {
 
 void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
 	// Erase old (optionally), display new
-	// Optionally begins and ends the EPD/SPI
-#if 0
-    Serial.print("display|pre all");
-    Serial.print(":Milliseconds=");
-    Serial.println( millis() );
-#endif
+	// Optionally begins and ends the EPD/SPI.
+	// There are delays in thos functions that only need to be pre/post use of the display
 
 	int temperature = this->TempSensor.read();
 
@@ -59,48 +55,41 @@ void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
     	this->EPD.setFactor(temperature);
 	}
 
-#if 0	
-    Serial.print("display|pre image_sram");
-    Serial.print(":Milliseconds=");
-    Serial.println( millis() );
-#endif
-
     if(clear_first)
     {
-        this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
+        this->EPD.clear(current_segment * this->pixel_height_segment, this->pixel_height_segment);
     }
-	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
+    //NOTE: Although the expectation is that pixel_height_segment is going to be in an uint8_t keep an eye on this...
+    assert( this->pixel_height_segment <= 255);
+	this->EPD.image_sram(this->new_image, current_segment * this->pixel_height_segment,
+	                    (uint8_t)this->pixel_height_segment);
 
-#if 0
-    Serial.print("display|post image_sram");
-    Serial.print(":Milliseconds=");
-    Serial.println( millis() );
-#endif
-	
 	if(end)
 	{
     	this->EPD.end();
 	}
 }
 
-
+//Font from Adafruit_GFX libary
+#include "glcdfont.c"
 
 // Draw a character
 //Override this function (so we don't need to modify the Adafruit library).
-//The ONLY changes are to remove the check on being inside the vertical (y) page
-#include "glcdfont.c"
+//The ONLY changes are to remove the check on being inside the vertical (y) segment
 void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 			    uint16_t color, uint16_t bg, uint8_t size) {
-
+#if 0 //Original code
 //  if((x >= _width)            || // Clip right
 //     (y >= _height)           || // Clip bottom
 //     ((x + 6 * size - 1) < 0) || // Clip left
 //     ((y + 8 * size - 1) < 0))   // Clip top
 //    return;
+#else
   if((x >= _width)            || // Clip right
      ((x + 6 * size - 1) < 0)    // Clip left
     )
     return;
+#endif
 
   for (int8_t i=0; i<6; i++ ) {
     uint8_t line;

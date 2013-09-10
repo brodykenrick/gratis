@@ -139,12 +139,13 @@ EPD_Class EPD(EPD_SIZE, Pin_PANEL_ON, Pin_BORDER, Pin_DISCHARGE, Pin_PWM, Pin_RE
 LM75A_Class LM75A;
 #endif /* EMBEDDED_ARTISTS */
 
-
-// graphic handler
+#define HEIGHT_OF_SEGMENT (22) //<!Proportional to the memory used and inversely proportional to prcessing to display (and also adds delay). If your Arduino hangs at startup reduce this...
+// Graphic handler
+//TODO: Move this into setup/loop so that we can create a visible error
 #ifndef EMBEDDED_ARTISTS
-EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, S5813A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, S5813A, HEIGHT_OF_SEGMENT);
 #else /* EMBEDDED_ARTISTS */
-EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, LM75A);
+EPD_GFX G_EPD(EPD, EPD_WIDTH, EPD_HEIGHT, LM75A, HEIGHT_OF_SEGMENT);
 #endif /* EMBEDDED_ARTISTS */
 
 // free RAM check for debugging. SRAM for ATmega328p = 2048Kb.
@@ -232,19 +233,18 @@ void setup() {
 static int counter = 0;
 // main loop
 void loop() {
-        int location = 0;
         long start_loop_ms = millis();
   
-	int h = G_EPD.real_height();
-	int hp = G_EPD.height();
-	int w = G_EPD.width();
-        int vertical_pages = G_EPD.get_vertical_page_count();
+	int h        = G_EPD.real_height();
+	int hp       = G_EPD.height();
+	int w        = G_EPD.width();
+        int segments = G_EPD.get_segment_count();
 
 	Serial.print("H=");
 	Serial.print(h);
 	Serial.print(" (with ");
-	Serial.print(vertical_pages);
-	Serial.print(" pages of ");
+	Serial.print(segments);
+	Serial.print(" segments of ");
 	Serial.print(hp);
 	Serial.print(") : W=");
 	Serial.println(w);
@@ -253,28 +253,23 @@ void loop() {
         //Always cleared before we get here.
         Serial.println( "-----------------------------------------------" );
 
-        for(int i=0; i < vertical_pages; i++)
+        for(int i=0; i < segments; i++)
         {
-//          Serial.print(location++);
-//          Serial.print(":Milliseconds=");
-//          Serial.println( millis() );
-          
-
-          int starting_row_this_page = i * hp;
-          Serial.print( "Vertical page " );Serial.print( i );
+          int starting_row_this_segment = i * hp;
+          Serial.print( "Segment " );Serial.print( i );
           Serial.print(" | ");
-          G_EPD.set_vertical_page(i);
+          G_EPD.set_current_segment(i);
           Serial.print("Drawing:");
           Serial.print(" Rect.");
-          //Rectangle only on page 0
-          //Optimise a little by only executing on the first page
+          //Rectangle only on segment 0
+          //Optimise a little by only executing on the first segment
           if (i == 0)
           {
             G_EPD.drawRect(counter%(w/2), 0, w/2, hp, EPD_GFX::BLACK);
           }
           
-          //Rectangle in middle of screen across pages
-          //We could limit to just the pages it is on -- but we can also just call for each page (at the cost of wasted drawPixels that do nothing useful)
+          //Rectangle in middle of screen across segments
+          //We could limit to just the segments it is on -- but we can also just call for each segment (at the cost of wasted drawPixels that do nothing useful)
           G_EPD.drawRect((counter + w/5)%(w/2), hp/2, w/3, h/2, EPD_GFX::BLACK);
         
           Serial.print(" Line.");
@@ -282,14 +277,14 @@ void loop() {
           G_EPD.drawLine( w*3/4, 0, w*3/4, h-1, EPD_GFX::BLACK);   //This is inclusive so has dest pixels inside the border
 
           Serial.print(" Text1.");
-          //Write text on a few pages
-          if(vertical_pages>=3)
+          //Write text on a few segments
+          if(segments>=3)
           {
-            if(( i == 0 ) || ( i == (vertical_pages-2) ) || ( i == (vertical_pages-1) ))
+            if(( i == 0 ) || ( i == (segments-2) ) || ( i == (segments-1) ))
             {
               char temp[] = "Each";
               unsigned int x = 2;
-              unsigned int y = 1 + starting_row_this_page; //Put on each page
+              unsigned int y = 1 + starting_row_this_segment; //Put on each segment
               unsigned int char_size_multiplier = 2;
               for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
               {
@@ -300,7 +295,7 @@ void loop() {
           }
 
           Serial.print(" Text2."); 
-          //Write text across pages
+          //Write text across segments
           {
             char temp[] = "Across";
             unsigned int x = w/16;
@@ -313,27 +308,16 @@ void loop() {
     	    }
           }
           Serial.println();
-          
-//          Serial.print(location++);
-//          Serial.print(":PreDisplay");
-//          Serial.print(":Milliseconds=");
-//          Serial.println( millis() );
-          
-  
-          //Serial.print( "Display vertical page " );Serial.println( i );
+
+          Serial.print( "Display segment " );Serial.println( i );
           // update the display
-          G_EPD.display( false, i==0, i==(vertical_pages-1) );
-          
-//          Serial.print(location++);
-//          Serial.print(":PostDisplay");
-//          Serial.print(":Milliseconds=");
-//          Serial.println( millis() );
+          G_EPD.display( false, i==0, i==(segments-1) );
           
         }
         counter++;        counter++;        counter++;        counter++;        counter++;
         
 //        Serial.println( "Finished loop" );
-        
+
         Serial.println( "++++++++++++++++++++++++++++++++++++++++++++++++++" );
 
         Serial.print("Total display rendering in ms = ");
@@ -352,8 +336,32 @@ void loop() {
 
 	Serial.println("Clearing.");
       	G_EPD.clear( );
-      
-//        Serial.print("Loop took ");
-//        Serial.println( millis() - start_loop_ms );
 }
 
+
+#if defined(NDEBUG)
+// Assert -- Handle diagnostic informations given by assertion and abort program execution.
+void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp)
+{
+	// Report helpful information via Serial.
+	Serial.print("ASSERT:");
+	Serial.print(__func);
+	Serial.print(":");
+	Serial.print(__file);
+	Serial.print(":");
+	Serial.print(__lineno, DEC);
+	Serial.print(":");
+	Serial.print(__sexp);
+	Serial.println(".");
+	Serial.print("RAM = ");
+	Serial.print( FreeRam() );
+	Serial.println(" bytes .");
+
+	Serial.flush();
+
+	delay(100);
+
+	// abort program execution.
+	abort();
+}
+#endif /*defined(NDEBUG)*/
