@@ -96,8 +96,8 @@ EPD_Class::EPD_Class(EPD_size size,
 	}
 
 	case EPD_2_7: {
-		//this->stage_time = 630; // milliseconds
-        this->stage_time = 500; // milliseconds. BK -- Want this less!!
+	    //BK -- Want this less!!
+		this->stage_time = 630; // milliseconds
 		this->lines_per_display = 176;
 		this->dots_per_line = 264;
 		this->bytes_per_line = 264 / 8;
@@ -422,9 +422,12 @@ void EPD_Class::frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, 
 	}
 }
 
-
+//TODO: Refactor these functions into one piece of code....
 void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
-	long stage_time = this->factored_stage_time;
+    //If we are only doing a sub-part of the screen then reduce staging time accordingly.
+    //BK: Check if this is actually correct to do...... (we will be executing the same number of SPI writes overall)
+    // So is it important for time? or number of times we write to the display......
+    long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
 	do {
 		unsigned long t_start = millis();
 		this->frame_fixed(fixed_value, stage, first_line_no, line_count);
@@ -439,7 +442,10 @@ void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_
 
 
 void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
-	long stage_time = this->factored_stage_time;
+    //If we are only doing a sub-part of the screen then reduce staging time accordingly.
+    //BK: Check if this is actually correct to do...... (we will be executing the same number of SPI writes overall)
+    // So is it important for time? or number of times we write to the display......
+    long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
 	do {
 		unsigned long t_start = millis();
 		this->frame_data(image, stage, first_line_no, line_count);
@@ -455,11 +461,19 @@ void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage,
 
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
-	long stage_time = this->factored_stage_time;
+    //If we are only doing a sub-part of the screen then reduce staging time accordingly.
+    //BK: Check if this is actually correct to do...... (we will be executing the same number of SPI writes overall)
+    // So is it important for time? or number of times we write to the display......
+    long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
+
+#if 0
     Serial.print("frame_sram_repeat for ");
     Serial.print( stage_time );
-    Serial.print(" @ ");
+    Serial.print("[mod ");
+    Serial.print( this->factored_stage_time );
+    Serial.print("] @ ");
     Serial.println( millis() );
+#endif
 
 	do {
 		unsigned long t_start = millis();
@@ -476,7 +490,10 @@ void EPD_Class::frame_sram_repeat(const uint8_t *image, EPD_stage stage, uint16_
 
 
 void EPD_Class::frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
-	long stage_time = this->factored_stage_time;
+    //If we are only doing a sub-part of the screen then reduce staging time accordingly.
+    //BK: Check if this is actually correct to do...... (we will be executing the same number of SPI writes overall)
+    // So is it important for time? or number of times we write to the display......
+    long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
 	do {
 		unsigned long t_start = millis();
 		this->frame_cb(address, reader, stage, first_line_no, line_count);

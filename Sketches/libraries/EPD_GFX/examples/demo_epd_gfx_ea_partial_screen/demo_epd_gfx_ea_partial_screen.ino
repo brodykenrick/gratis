@@ -15,21 +15,21 @@
 // governing permissions and limitations under the License.
 
 
-// graphic temperature display
+// Quick update of whole display using partial scren segments
 
 // Operation from reset:
 // * display version
 // * display compiled-in display setting
-// * display FLASH detected or not
-// * display temperature (displayed before every image is changed)
 // * clear screen
-// * update display (temperature)
-// * delay 60 seconds (flash LED)
+// * update display -- loops over some display code
+// * delay X seconds (flash LED)
 // * back to update display
 #include <assert.h>
 
 #include <inttypes.h>
 #include <ctype.h>
+
+//#include "Stopwatch.h"
 
 // required libraries
 #include <SPI.h>
@@ -78,11 +78,11 @@
 
 
 // update delay in seconds
-#define LOOP_DELAY_SECONDS 5
+#define LOOP_DELAY_SECONDS 10
 
 
 // current version number
-#define DEMO_VERSION "1.BK.partial_screen"
+#define DEMO_VERSION "1"
 
 
 #if defined(__MSP430_CPU__)
@@ -255,13 +255,14 @@ void loop() {
 
         for(int i=0; i < vertical_pages; i++)
         {
-          Serial.print(location++);
-          Serial.print(":Milliseconds=");
-          Serial.println( millis() );
+//          Serial.print(location++);
+//          Serial.print(":Milliseconds=");
+//          Serial.println( millis() );
           
 
           int starting_row_this_page = i * hp;
-          Serial.print( "Vertical page " );Serial.println( i );
+          Serial.print( "Vertical page " );Serial.print( i );
+          Serial.print(" | ");
           G_EPD.set_vertical_page(i);
           Serial.print("Drawing:");
           Serial.print(" Rect.");
@@ -287,10 +288,10 @@ void loop() {
             if(( i == 0 ) || ( i == (vertical_pages-2) ) || ( i == (vertical_pages-1) ))
             {
               char temp[] = "Each";
-              int x = 2;
-              int y = 1 + starting_row_this_page; //Put on each page
-              int char_size_multiplier = 2;
-              for (int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
+              unsigned int x = 2;
+              unsigned int y = 1 + starting_row_this_page; //Put on each page
+              unsigned int char_size_multiplier = 2;
+              for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
               {
                   //Serial.print("Letter=");Serial.println( temp[j] );
                   G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
@@ -302,10 +303,10 @@ void loop() {
           //Write text across pages
           {
             char temp[] = "Across";
-            int x = w/16;
-            int y = h/6;
-            int char_size_multiplier = 6;
-            for (int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
+            unsigned int x = w/16;
+            unsigned int y = h/6;
+            unsigned int char_size_multiplier = 6;
+            for (unsigned int j = 0; j < sizeof(temp) - 1; ++j, x += (char_size_multiplier * (7)))
             {
                 //Serial.print("Letter=");Serial.println( temp[j] );
                 G_EPD.drawChar(x, y, temp[j], EPD_GFX::BLACK, EPD_GFX::WHITE, char_size_multiplier );
@@ -313,31 +314,32 @@ void loop() {
           }
           Serial.println();
           
-          Serial.print(location++);
-          Serial.print(":PreDisplay");
-          Serial.print(":Milliseconds=");
-          Serial.println( millis() );
+//          Serial.print(location++);
+//          Serial.print(":PreDisplay");
+//          Serial.print(":Milliseconds=");
+//          Serial.println( millis() );
           
   
           //Serial.print( "Display vertical page " );Serial.println( i );
           // update the display
           G_EPD.display( false, i==0, i==(vertical_pages-1) );
           
-          Serial.print(location++);
-          Serial.print(":PostDisplay");
-          Serial.print(":Milliseconds=");
-          Serial.println( millis() );
+//          Serial.print(location++);
+//          Serial.print(":PostDisplay");
+//          Serial.print(":Milliseconds=");
+//          Serial.println( millis() );
           
         }
         counter++;        counter++;        counter++;        counter++;        counter++;
         
-        Serial.println( "Finished loop" );
+//        Serial.println( "Finished loop" );
         
         Serial.println( "++++++++++++++++++++++++++++++++++++++++++++++++++" );
 
-        Serial.print("Total Displaying took ");
+        Serial.print("Total display rendering in ms = ");
         Serial.println( millis() - start_loop_ms );
-         
+        
+        Serial.println( "Delay with LED flashing." );
 
 	// flash LED for a number of seconds
 	for (int x = 0; x < LOOP_DELAY_SECONDS * 10; ++x)
@@ -348,21 +350,10 @@ void loop() {
 		  delay(50);
 	}
 
-//        Serial.print(location++);
-//        Serial.print(":Milliseconds=");
-//        Serial.println( millis() );
-//        
-
-	Serial.println("Clearing.");        
+	Serial.println("Clearing.");
       	G_EPD.clear( );
       
-//        Serial.print(location++);
-//        Serial.print(":Milliseconds=");
-//        Serial.println( millis() );
-//        
-
-        Serial.print("Loop took ");
-        Serial.println( millis() - start_loop_ms );
-                
+//        Serial.print("Loop took ");
+//        Serial.println( millis() - start_loop_ms );
 }
 

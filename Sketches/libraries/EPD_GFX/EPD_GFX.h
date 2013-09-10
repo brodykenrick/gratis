@@ -114,15 +114,16 @@ public:
 	//NOTE: This is the trickery by which we get to limit the vertical size
 	//This function does not write to the buffer if the pixel is not on the current page
 	//VERY inefficient!
-	void drawPixel(int x, int y, unsigned int colour)
+	void drawPixel(int16_t x, int16_t y, unsigned int colour)
 	{
+	    assert(y>=0); //BK: Not sure why it is allowed to be negative......
         if(
-            (y >= ( vertical_page    * this->pixel_height_shortened))
+            ((uint16_t)y >= ( vertical_page    * this->pixel_height_shortened))
             &&
-            (y <  ((vertical_page+1) * this->pixel_height_shortened))
+            ((uint16_t)y <  ((vertical_page+1) * this->pixel_height_shortened))
         )
         {
-            y = (y % this->pixel_height_shortened); //Bring into 0..buffer size range
+            y = (y % this->pixel_height_shortened); //Bring into 0..buffer_height size range
 	
 		    int bit = x & 0x07;
 		    int byte = x / 8 + y * (pixel_width / 8);

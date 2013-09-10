@@ -45,9 +45,11 @@ void EPD_GFX::clear() {
 void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
 	// Erase old (optionally), display new
 	// Optionally begins and ends the EPD/SPI
+#if 0
     Serial.print("display|pre all");
     Serial.print(":Milliseconds=");
     Serial.println( millis() );
+#endif
 
 	int temperature = this->TempSensor.read();
 
@@ -56,20 +58,24 @@ void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
     	this->EPD.begin();
     	this->EPD.setFactor(temperature);
 	}
-	
+
+#if 0	
     Serial.print("display|pre image_sram");
     Serial.print(":Milliseconds=");
     Serial.println( millis() );
+#endif
 
     if(clear_first)
     {
         this->EPD.clear(vertical_page * this->pixel_height_shortened, this->pixel_height_shortened);
     }
 	this->EPD.image_sram(this->new_image, vertical_page * this->pixel_height_shortened, (uint8_t)this->pixel_height_shortened);
-	
+
+#if 0
     Serial.print("display|post image_sram");
     Serial.print(":Milliseconds=");
     Serial.println( millis() );
+#endif
 	
 	if(end)
 	{

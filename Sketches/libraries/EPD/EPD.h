@@ -24,8 +24,9 @@
 #include <avr/pgmspace.h>
 #endif
 
-#define EPD_PARTIAL_SCREEN_SRAM
-// if more SRAM available (8 kBytes)
+#define EPD_PARTIAL_SCREEN_SRAM //!<If we intend to use partial screen (segments). Enables SRAM functions.
+
+// If more SRAM available (8 kBytes)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega_2560__)
 #define EPD_ENABLE_EXTRA_SRAM 1
 #elif defined(EPD_PARTIAL_SCREEN_SRAM)
@@ -63,7 +64,7 @@ private:
 	uint16_t lines_per_display;
 	uint16_t dots_per_line;
 	uint16_t bytes_per_line;
-	uint16_t bytes_per_scan;
+	uint16_t bytes_per_scan; //BK: Check how this is used. As it might be an issue on exceeding the number of lines in our smaller sizes.
 	PROGMEM const uint8_t *gate_source;
 	uint16_t gate_source_length;
 	PROGMEM const uint8_t *channel_select;
@@ -113,6 +114,8 @@ public:
 #if 0
         //BK - I expect this will affect the duration of the ink.....
         //BK - Speeds up the display though.
+        //BK: Seems strange wqe need this stage if we are already cleared though.......
+        //BK - Todo: check on the implications.....
 		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
 		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
 #endif
