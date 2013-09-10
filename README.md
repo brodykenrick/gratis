@@ -15,6 +15,7 @@ This is a trade-off of display memory for processing cost and delay in display -
 These are example programs that will compile and run on the following platforms:
 
 0. Arduino Uno
+The thermo demo and a new demo are added under EPD_GFX as examples (so they will be picked up in Arduino IDE)
 
 The following should still work but have not been tested.
 
