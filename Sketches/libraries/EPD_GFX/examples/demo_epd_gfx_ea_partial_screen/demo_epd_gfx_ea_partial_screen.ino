@@ -17,6 +17,7 @@
 
 // Brody Kenrick
 // Quick demo of updating of whole display using partial screen segments
+// Works for segments of height of 1 pixel and up  :)
 
 // Operation from reset:
 // * display version
