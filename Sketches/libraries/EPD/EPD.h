@@ -26,6 +26,10 @@
 
 #define EPD_PARTIAL_SCREEN_SRAM //!<If we intend to use partial screen (segments). Enables SRAM functions.
 
+#define EPD_PROGMEM_IMAGE_SUPPORT
+
+//#define EPD_OLD_IMAGE_SUPPORT //!< Support old images for compensating...
+
 // If more SRAM available (8 kBytes)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega_2560__)
 #define EPD_ENABLE_EXTRA_SRAM 1
@@ -50,13 +54,13 @@ typedef void EPD_reader(void *buffer, uint32_t address, uint16_t length);
 
 class EPD_Class {
 private:
-	int EPD_Pin_EPD_CS;
-	int EPD_Pin_PANEL_ON;
-	int EPD_Pin_BORDER;
-	int EPD_Pin_DISCHARGE;
-	int EPD_Pin_PWM;
-	int EPD_Pin_RESET;
-	int EPD_Pin_BUSY;
+	uint8_t EPD_Pin_EPD_CS;
+	uint8_t EPD_Pin_PANEL_ON;
+	uint8_t EPD_Pin_BORDER;
+	uint8_t EPD_Pin_DISCHARGE;
+	uint8_t EPD_Pin_PWM;
+	uint8_t EPD_Pin_RESET;
+	uint8_t EPD_Pin_BUSY;
 
 	EPD_size size;
 	uint16_t stage_time;
@@ -91,6 +95,7 @@ public:
 		this->frame_fixed_repeat(0xaa, EPD_normal, first_line_no, line_count);
 	}
 
+#if defined(EPD_PROGMEM_IMAGE_SUPPORT)
 	// assuming a clear (white) screen output an image (PROGMEM data)
 	void image(PROGMEM const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
 		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
@@ -99,6 +104,14 @@ public:
 		this->frame_data_repeat(image, EPD_normal, first_line_no, line_count);
 	}
 
+void image_subsample_by_2(PROGMEM const uint8_t *image_subsampled_by_2, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
+		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
+		this->frame_data_repeat(image_subsampled_by_2, EPD_inverse, first_line_no, line_count, 2);
+		this->frame_data_repeat(image_subsampled_by_2, EPD_normal,  first_line_no, line_count, 2);
+	}
+
+#if defined(EPD_OLD_IMAGE_SUPPORT)
 	// change from old image to new image (PROGMEM data)
 	void image(PROGMEM const uint8_t *old_image, PROGMEM const uint8_t *new_image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
 		this->frame_data_repeat(old_image, EPD_compensate, first_line_no, line_count);
@@ -106,6 +119,9 @@ public:
 		this->frame_data_repeat(new_image, EPD_inverse, first_line_no, line_count);
 		this->frame_data_repeat(new_image, EPD_normal, first_line_no, line_count);
 	}
+#endif //defined(EPD_OLD_IMAGE_SUPPORT)
+#endif //defined(EPD_PROGMEM_IMAGE_SUPPORT)
+
 
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 
@@ -124,6 +140,7 @@ public:
 		this->frame_sram_repeat(image, EPD_normal, first_line_no, line_count);
 	}
 
+#if defined(EPD_OLD_IMAGE_SUPPORT)
 	// change from old image to new image (SRAM version)
 	void image_sram(const uint8_t *old_image, const uint8_t *new_image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
 		this->frame_sram_repeat(old_image, EPD_compensate, first_line_no, line_count);
@@ -131,26 +148,27 @@ public:
 		this->frame_sram_repeat(new_image, EPD_inverse, first_line_no, line_count);
 		this->frame_sram_repeat(new_image, EPD_normal, first_line_no, line_count);
 	}
-#endif
+#endif //defined(EPD_OLD_IMAGE_SUPPORT)
+#endif //defined(EPD_ENABLE_EXTRA_SRAM)
 
 	// Low level API calls
 	// ===================
 
 	// single frame refresh
 	void frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, uint8_t subsample_factor = 1);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_sram(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-#endif
+#endif //defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 
 
 	// stage_time frame refresh
 	void frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, uint8_t subsample_factor = 1);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_sram_repeat(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-#endif
+#endif //defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 
 	// convert temperature to compensation factor
@@ -164,13 +182,13 @@ public:
 	// inline static void detachInterrupt();
 
 	EPD_Class(EPD_size size,
-		  int panel_on_pin,
-		  int border_pin,
-		  int discharge_pin,
-		  int pwm_pin,
-		  int reset_pin,
-		  int busy_pin,
-		  int chip_select_pin);
+		  uint8_t panel_on_pin,
+		  uint8_t border_pin,
+		  uint8_t discharge_pin,
+		  uint8_t pwm_pin,
+		  uint8_t reset_pin,
+		  uint8_t busy_pin,
+		  uint8_t chip_select_pin);
 
 };
 

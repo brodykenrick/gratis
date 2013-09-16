@@ -156,6 +156,10 @@ public:
     void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size);
 
+    void drawBitmapFast(const uint8_t PROGMEM *bitmap);
+
+    void drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled);
+
 };
 
 #endif

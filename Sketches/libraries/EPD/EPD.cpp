@@ -40,13 +40,13 @@ static void SPI_send(uint8_t cs_pin, const uint8_t *buffer, uint16_t length);
 
 
 EPD_Class::EPD_Class(EPD_size size,
-		     int panel_on_pin,
-		     int border_pin,
-		     int discharge_pin,
-		     int pwm_pin,
-		     int reset_pin,
-		     int busy_pin,
-		     int chip_select_pin) :
+		     uint8_t panel_on_pin,
+		     uint8_t border_pin,
+		     uint8_t discharge_pin,
+		     uint8_t pwm_pin,
+		     uint8_t reset_pin,
+		     uint8_t busy_pin,
+		     uint8_t chip_select_pin) :
 	EPD_Pin_PANEL_ON(panel_on_pin),
 	EPD_Pin_BORDER(border_pin),
 	EPD_Pin_DISCHARGE(discharge_pin),
@@ -386,13 +386,66 @@ void EPD_Class::frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first
 }
 
 
-void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count){
+void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count, uint8_t subsample_factor){
     if(line_count == 0)
     {
         line_count = this->lines_per_display;
     }
+    
+    Serial.print("frame_data(");
+    Serial.print("image=0x");
+    Serial.print((int)image,HEX);    
+    Serial.print(",");
+    Serial.print("subsample_factor=");
+    Serial.print(subsample_factor);
+    Serial.print(",");
+    Serial.print("this->bytes_per_line=");
+    Serial.print(this->bytes_per_line);
+    Serial.println(")");
+    
+    boolean line_in_progmem = true;
+    if(subsample_factor > 1)
+    {
+        line_in_progmem = false;
+    }
+  
 	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
-		this->line(line, &image[(line - first_line_no) * this->bytes_per_line], 0, true, stage);
+	    if(line_in_progmem)
+	    {
+    		this->line(line, &image[(line - first_line_no) * this->bytes_per_line], 0, true, stage);
+		}
+		else
+		{
+		    //The source is 16.5 bytes wide --> 17 bytes with padding
+            uint8_t image_sram_temp[33] = {0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA};
+
+            for (uint16_t b = 0; b < 17; ++b)
+          	{
+				byte pixels = pgm_read_byte_near(  &image[(line - first_line_no)/2 * 17 + b] );
+				
+				byte pixels_left  = (pixels & 0b0001)<<0 | (pixels & 0b0001)<<1 ;
+				     pixels_left |= (pixels & 0b0010)<<1 | (pixels & 0b0010)<<2 ;
+				     pixels_left |= (pixels & 0b0100)<<2 | (pixels & 0b0100)<<3 ;
+				     pixels_left |= (pixels & 0b1000)<<3 | (pixels & 0b1000)<<4 ;
+				
+    			byte pixels_right  = (pixels & 0b00010000)>>4<<0 | (pixels & 0b00010000)>>4<<1 ;
+				     pixels_right |= (pixels & 0b00100000)>>4<<1 | (pixels & 0b00100000)>>4<<2 ;
+				     pixels_right |= (pixels & 0b01000000)>>4<<2 | (pixels & 0b01000000)>>4<<3 ;
+				     pixels_right |= (pixels & 0b10000000)>>4<<3 | (pixels & 0b10000000)>>4<<4 ;
+				
+				
+				image_sram_temp[2*b] = pixels_left;
+				//image_sram_temp[2*b] = 0x00;
+				if((2*b+1)<33)
+				{
+                    image_sram_temp[2*b+1] = pixels_right;
+                    //image_sram_temp[2*b+1] = 0xff;
+                }
+			}
+      
+    		this->line(line, image_sram_temp, 0, false, stage);
+		}
+    		
 	}
 }
 
@@ -441,14 +494,14 @@ void EPD_Class::frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_
 }
 
 
-void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
+void EPD_Class::frame_data_repeat(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count, uint8_t subsample_factor) {
     //If we are only doing a sub-part of the screen then reduce staging time accordingly.
     //BK: Check if this is actually correct to do...... (we will be executing the same number of SPI writes overall)
     // So is it important for time? or number of times we write to the display......
     long stage_time = ((((long)this->factored_stage_time) * line_count) / this->lines_per_display);
 	do {
 		unsigned long t_start = millis();
-		this->frame_data(image, stage, first_line_no, line_count);
+		this->frame_data(image, stage, first_line_no, line_count, subsample_factor);
 		unsigned long t_end = millis();
 		if (t_end > t_start) {
 			stage_time -= t_end - t_start;
@@ -554,7 +607,8 @@ void EPD_Class::line(uint16_t line, const uint8_t *data, uint8_t fixed_value, bo
 			SPI_put_wait(pixels, this->EPD_Pin_BUSY);
 		} else {
 			SPI_put_wait(fixed_value, this->EPD_Pin_BUSY);
-		}	}
+		}
+	}
 
 	// scan line
 	for (uint16_t b = 0; b < this->bytes_per_scan; ++b) {
