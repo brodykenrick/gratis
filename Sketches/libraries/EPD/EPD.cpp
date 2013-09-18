@@ -385,43 +385,42 @@ void EPD_Class::frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first
 	}
 }
 
-
+//Currently only works with subsample of 2
 void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count, uint8_t subsample_factor){
     if(line_count == 0)
     {
         line_count = this->lines_per_display;
     }
     
-    Serial.print("frame_data(");
-    Serial.print("image=0x");
-    Serial.print((int)image,HEX);    
-    Serial.print(",");
-    Serial.print("subsample_factor=");
-    Serial.print(subsample_factor);
-    Serial.print(",");
-    Serial.print("this->bytes_per_line=");
-    Serial.print(this->bytes_per_line);
-    Serial.println(")");
-    
     boolean line_in_progmem = true;
     if(subsample_factor > 1)
     {
         line_in_progmem = false;
     }
+    
+    if(subsample_factor > 2)
+    {
+        //Give up and just have the subsample data drawn directly (will read garbage by the end......)
+        line_in_progmem = true;
+    }
   
-	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line) {
+	for (uint8_t line = first_line_no; line < line_count + first_line_no ; ++line)
+	{
 	    if(line_in_progmem)
 	    {
-    		this->line(line, &image[(line - first_line_no) * this->bytes_per_line], 0, true, stage);
+	        const uint8_t *image_temp = &image[(line - first_line_no) * this->bytes_per_line];
+    		this->line(line, image_temp, 0, line_in_progmem, stage);
 		}
 		else
 		{
-		    //The source is 16.5 bytes wide --> 17 bytes with padding
-            uint8_t image_sram_temp[33] = {0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA};
+            uint8_t image_sram_temp[this->bytes_per_line];
+            //The downsample-by-2 source is 16.5 bytes wide --> 17 bytes with padding
+            uint8_t source_bytes_per_line = 17; //Hardcoded to only work with subsample of 2
 
-            for (uint16_t b = 0; b < 17; ++b)
+            //TODO: Need to swap this logic around to do a read and expand per byte in the destination to support subsample by 4 (or add lots more conditions )
+            for (uint16_t b = 0; b < source_bytes_per_line; ++b)
           	{
-				byte pixels = pgm_read_byte_near(  &image[(line - first_line_no)/2 * 17 + b] );
+				byte pixels = pgm_read_byte_near(  &image[(line - first_line_no)/subsample_factor * source_bytes_per_line + b] );
 				
 				byte pixels_left  = (pixels & 0b0001)<<0 | (pixels & 0b0001)<<1 ;
 				     pixels_left |= (pixels & 0b0010)<<1 | (pixels & 0b0010)<<2 ;
@@ -434,18 +433,14 @@ void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16
 				     pixels_right |= (pixels & 0b10000000)>>4<<3 | (pixels & 0b10000000)>>4<<4 ;
 				
 				
-				image_sram_temp[2*b] = pixels_left;
-				//image_sram_temp[2*b] = 0x00;
-				if((2*b+1)<33)
+				image_sram_temp[subsample_factor*b] = pixels_left;
+				if((subsample_factor*b+1) < this->bytes_per_line)
 				{
-                    image_sram_temp[2*b+1] = pixels_right;
-                    //image_sram_temp[2*b+1] = 0xff;
+                    image_sram_temp[subsample_factor*b+1] = pixels_right;
                 }
 			}
-      
-    		this->line(line, image_sram_temp, 0, false, stage);
+    		this->line(line, image_sram_temp, 0, line_in_progmem, stage);
 		}
-    		
 	}
 }
 
