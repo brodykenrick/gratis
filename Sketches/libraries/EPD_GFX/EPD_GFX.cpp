@@ -28,11 +28,10 @@ void EPD_GFX::clear_new_image() {
 }
 
 void EPD_GFX::clear() {
-	int temperature = this->TempSensor.read();
 
 	// erase display
 	this->EPD.begin();
-	this->EPD.setFactor(temperature);
+	this->EPD.setFactor( get_temperature() );
 	this->EPD.clear();
 	this->EPD.end();
 
@@ -47,12 +46,10 @@ void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
 	// Optionally begins and ends the EPD/SPI.
 	// There are delays in thos functions that only need to be pre/post use of the display
 
-	int temperature = this->TempSensor.read();
-
 	if(begin)
 	{
     	this->EPD.begin();
-    	this->EPD.setFactor(temperature);
+    	this->EPD.setFactor( get_temperature() );
 	}
 
     if(clear_first)
@@ -118,10 +115,8 @@ void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 #if 0
 void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 
-	int temperature = this->TempSensor.read();
-
     this->EPD.begin();
-	this->EPD.setFactor(temperature);
+	this->EPD.setFactor( get_temperature() );
 	this->EPD.clear();
 	this->EPD.image( bitmap );
 	this->EPD.end();
@@ -130,10 +125,8 @@ void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 
 void EPD_GFX::drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled) {
 
-	int temperature = this->TempSensor.read();
-
     this->EPD.begin();
-	this->EPD.setFactor(temperature);
+	this->EPD.setFactor( get_temperature() );
 	this->EPD.clear();
 	this->EPD.image_subsample_by_2( bitmap_subsampled );
 	this->EPD.end();

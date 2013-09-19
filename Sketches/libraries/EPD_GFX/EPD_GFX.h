@@ -25,7 +25,7 @@
 
 #include <EPD.h>
 
-//#define EPD_HARDCODED_TEMP (21) //!< Need to save on the code space of temp sensor (LM75A includes Wire/TWI)? Then remove it here.
+#define EPD_HARDCODED_TEMP (21) //!< Need to save on the code space of temp sensor (LM75A includes Wire/TWI)? Then remove it here.
 
 //Temperature sensor
 #if !defined(EPD_HARDCODED_TEMP)
@@ -51,12 +51,17 @@ class EPD_GFX : public Adafruit_GFX {
 
 private:
 	EPD_Class &EPD;
+#if !defined(EPD_HARDCODED_TEMP)
 	//Temp sensor only needs a read function that returns in degrees Celsius
 #ifndef EMBEDDED_ARTISTS
 	S5813A_Class &TempSensor;
 #else /* EMBEDDED_ARTISTS */
     LM75A_Class &TempSensor;
 #endif /* EMBEDDED_ARTISTS */
+
+#else
+  	uint8_t         temp_celsius;
+#endif //!defined(EPD_HARDCODED_TEMP)
 	
     uint16_t pixel_width;  // must be a multiple of 8
     uint16_t pixel_height;
@@ -67,6 +72,15 @@ private:
 
     //Buffer for updating display
 	uint8_t * new_image;
+	
+	uint8_t get_temperature()
+	{
+#if defined(EPD_HARDCODED_TEMP)
+	    return temp_celsius;
+#else
+        return this->TempSensor.read();
+#endif //defined(EPD_HARDCODED_TEMP)
+	}
 
 	EPD_GFX(EPD_Class&);  // disable copy constructor
 
@@ -79,14 +93,26 @@ public:
 
 	// constructor
 	EPD_GFX(EPD_Class &epd, uint16_t pixel_width, uint16_t pixel_height,
+#if !defined(EPD_HARDCODED_TEMP)
+
 #ifndef EMBEDDED_ARTISTS
 	S5813A_Class &temp_sensor,
 #else /* EMBEDDED_ARTISTS */
 	LM75A_Class &temp_sensor,
 #endif /* EMBEDDED_ARTISTS */
+
+#else
+    uint8_t         temp_celsius,
+#endif //!defined(EPD_HARDCODED_TEMP)
+
     uint16_t pixel_height_segment = EPD_GFX_HEIGHT_SEGMENT_DEFAULT ):
 		Adafruit_GFX(pixel_width, min(pixel_height,pixel_height_segment)), //NOTE: The Adafruit_GFX lib is set to the minimal value
-		EPD(epd), TempSensor(temp_sensor),
+		EPD(epd),
+#if defined(EPD_HARDCODED_TEMP)
+        temp_celsius(temp_celsius),
+#else
+		TempSensor(temp_sensor),
+#endif //defined(EPD_HARDCODED_TEMP)
 		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_segment(pixel_height_segment)
 	{
         //Assumes divisor with no remainder....
@@ -172,6 +198,7 @@ public:
     void drawBitmapFast(const uint8_t PROGMEM *bitmap);
 #endif
     void drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled);
+
 
 };
 
