@@ -115,9 +115,7 @@ void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     }
   }
 }
-
-//TODO: Do a downsampled version of this....
-//Allowing h/2 and v/2 to save mem.
+#if 0
 void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 
 	int temperature = this->TempSensor.read();
@@ -128,6 +126,7 @@ void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 	this->EPD.image( bitmap );
 	this->EPD.end();
 }
+#endif
 
 void EPD_GFX::drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled) {
 

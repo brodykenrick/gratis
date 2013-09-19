@@ -667,6 +667,12 @@ void EPD_Class::line(uint16_t line, const uint8_t *data, uint8_t fixed_value, bo
 	SPI_send(this->EPD_Pin_EPD_CS, CU8(0x72, 0x2f), 2);
 
 	SPI_off();
+	
+	{
+	    //TODO: Remove this
+	    extern int check_memory();
+	    check_memory();
+	}
 }
 
 

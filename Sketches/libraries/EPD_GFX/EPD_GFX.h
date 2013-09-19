@@ -24,13 +24,20 @@
 #include <assert.h>
 
 #include <EPD.h>
+
+//#define EPD_HARDCODED_TEMP (21) //!< Need to save on the code space of temp sensor (LM75A includes Wire/TWI)? Then remove it here.
+
 //Temperature sensor
+#if !defined(EPD_HARDCODED_TEMP)
+
 #ifndef EMBEDDED_ARTISTS
 #include <S5813A.h>
 #else /* EMBEDDED_ARTISTS */
 #include <Wire.h>
 #include <LM75A.h>
 #endif /* EMBEDDED_ARTISTS */
+
+#endif //!defined(EPD_HARDCODED_TEMP)
 
 #include <Adafruit_GFX.h>
 
@@ -118,6 +125,7 @@ public:
         return total_segments;
     }
 
+    //TODO: Move into function
 	// set a single pixel in new_image
 	//NOTE: This is the trickery by which we get to limit the vertical size
 	//This function does not write to the buffer if the pixel is not on the current segment
@@ -148,6 +156,11 @@ public:
         	Serial.print("drawPixel -- not in segment! @ ");Serial.println(y);
         }
 #endif
+        {
+            //TODO: Remove this
+            extern int check_memory();
+            check_memory();
+        }
 	}
 
 	// Change old image to new image
@@ -155,9 +168,9 @@ public:
 	void clear();
     void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size);
-
+#if 0
     void drawBitmapFast(const uint8_t PROGMEM *bitmap);
-
+#endif
     void drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled);
 
 };
