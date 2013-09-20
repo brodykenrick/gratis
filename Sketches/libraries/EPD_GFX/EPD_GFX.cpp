@@ -112,7 +112,7 @@ void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     }
   }
 }
-#if 0
+#if 1
 void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 
     this->EPD.begin();
@@ -121,8 +121,7 @@ void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
 	this->EPD.image( bitmap );
 	this->EPD.end();
 }
-#endif
-
+#else
 void EPD_GFX::drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled) {
 
     this->EPD.begin();
@@ -131,3 +130,8 @@ void EPD_GFX::drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsample
 	this->EPD.image_subsample_by_2( bitmap_subsampled );
 	this->EPD.end();
 }
+#endif
+
+
+
+

@@ -25,7 +25,7 @@
 
 #include <EPD.h>
 
-#define EPD_HARDCODED_TEMP (21) //!< Need to save on the code space of temp sensor (LM75A includes Wire/TWI)? Then remove it here.
+#define EPD_HARDCODED_TEMP //!< Need to save on the code space of temp sensor (LM75A includes Wire/TWI)? Then remove it here.
 
 //Temperature sensor
 #if !defined(EPD_HARDCODED_TEMP)
@@ -179,14 +179,17 @@ public:
 #if 0
         else
         {
+            //Useful for debugging and optimising
         	Serial.print("drawPixel -- not in segment! @ ");Serial.println(y);
         }
 #endif
+#if 0
         {
             //TODO: Remove this
             extern int check_memory();
             check_memory();
         }
+#endif
 	}
 
 	// Change old image to new image
@@ -194,10 +197,11 @@ public:
 	void clear();
     void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size);
-#if 0
+#if 1
     void drawBitmapFast(const uint8_t PROGMEM *bitmap);
-#endif
+#else
     void drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled);
+#endif
 
 
 };

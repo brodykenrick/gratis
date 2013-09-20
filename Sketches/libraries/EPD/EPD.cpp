@@ -400,7 +400,7 @@ void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16
     
     if(subsample_factor > 2)
     {
-        //Give up and just have the subsample data drawn directly (will read garbage by the end......)
+        //Give up and just have the subsample data drawn directly (will read garbage by the end of the frame......)
         line_in_progmem = true;
     }
   
@@ -667,12 +667,14 @@ void EPD_Class::line(uint16_t line, const uint8_t *data, uint8_t fixed_value, bo
 	SPI_send(this->EPD_Pin_EPD_CS, CU8(0x72, 0x2f), 2);
 
 	SPI_off();
-	
+
+#if 0
 	{
 	    //TODO: Remove this
 	    extern int check_memory();
 	    check_memory();
 	}
+#endif
 }
 
 
