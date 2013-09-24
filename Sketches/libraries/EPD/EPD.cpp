@@ -385,22 +385,31 @@ void EPD_Class::frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first
 	}
 }
 
-//Currently only works with subsample of 2
-void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage, uint16_t first_line_no, uint8_t line_count, uint8_t subsample_factor){
+//Currently only works with normal data and when subsampled by 2 (both vert. and hor.)
+void EPD_Class::frame_data(PROGMEM const uint8_t *image, EPD_stage stage,
+                           uint16_t first_line_no, uint8_t line_count,
+                           boolean subsampled_by_2){
+    uint8_t subsample_factor = 1;
     if(line_count == 0)
     {
         line_count = this->lines_per_display;
     }
-    
+    if( subsampled_by_2 )
+    {
+        subsample_factor = 2;
+    }
+
     boolean line_in_progmem = true;
     if(subsample_factor > 1)
     {
+        //If using the subsampled version we need to create a line in SRAM (on the stack).
         line_in_progmem = false;
     }
     
     if(subsample_factor > 2)
     {
         //Give up and just have the subsample data drawn directly (will read garbage by the end of the frame......)
+        //TODO: Make this safer....
         line_in_progmem = true;
     }
   

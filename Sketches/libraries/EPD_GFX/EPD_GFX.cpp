@@ -72,7 +72,10 @@ void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
 
 // Draw a character
 //Override this function (so we don't need to modify the Adafruit library).
-//The ONLY changes are to remove the check on being inside the vertical (y) segment
+//The changes are to:
+// * modify the check on being inside the vertical (y) segment
+//  to allow for chars that overlap segments (and also to optimise a
+//  quick return if the char won't be in a segment at all)
 void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 			    uint16_t color, uint16_t bg, uint8_t size) {
 #if 0 //Original code
@@ -83,18 +86,42 @@ void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 //    return;
 #else
   if((x >= _width)            || // Clip right
-     ((x + 6 * size - 1) < 0)    // Clip left
+     ((x + EPD_GFX_CHAR_PADDED_WIDTH * size - 1) < 0)    // Clip left
     )
     return;
 #endif
 
-  for (int8_t i=0; i<6; i++ ) {
+#if 1
+  //Check if we are doing any drawing in this segment
+  //NOTE: This is an optimisation (only for parialt segments) to save wasted cyclces getting all the way to drawPixel for many non-existent pixels for this segment.
+  const unsigned int y_end_char = y + size * (EPD_GFX_CHAR_PADDED_HEIGHT);
+  const unsigned int segment_start_row = (current_segment  )* pixel_height_segment;
+  const unsigned int segment_end_row   = (current_segment+1)* pixel_height_segment;
+  boolean draw_char = true;
+  if(y > segment_end_row)
+  {
+	  //Char starts on a later segment
+	  draw_char = false;
+  }
+  if(y_end_char < segment_start_row)
+  {
+	  //Char finished on an earlier segment
+	  draw_char = false;
+  }
+  if(!draw_char)
+  {
+    return;
+  }
+#endif
+
+  //Unchanged below (except magic numbers replaced)
+  for (int8_t i=0; i<EPD_GFX_CHAR_PADDED_WIDTH; i++ ) {
     uint8_t line;
-    if (i == 5) 
+    if (i == EPD_GFX_CHAR_BASE_WIDTH) 
       line = 0x0;
     else 
-      line = pgm_read_byte(font+(c*5)+i);
-    for (int8_t j = 0; j<8; j++) {
+      line = pgm_read_byte(font+(c*EPD_GFX_CHAR_BASE_WIDTH)+i);
+    for (int8_t j = 0; j<EPD_GFX_CHAR_PADDED_HEIGHT; j++) {
       if (line & 0x1) {
         if (size == 1) // default size
           drawPixel(x+i, y+j, color);
@@ -112,26 +139,16 @@ void EPD_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     }
   }
 }
-#if 1
-void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap) {
+
+#if defined(EPD_DRAWBITMAP_FAST_SUPPORT)
+void EPD_GFX::drawBitmapFast(const uint8_t PROGMEM *bitmap, boolean subsampled_by_2) {
 
     this->EPD.begin();
 	this->EPD.setFactor( get_temperature() );
 	this->EPD.clear();
-	this->EPD.image( bitmap );
+	this->EPD.image( bitmap, 0, this->pixel_height, subsampled_by_2 );
 	this->EPD.end();
 }
-#else
-void EPD_GFX::drawBitmapFastSubsampleBy2(const uint8_t PROGMEM *bitmap_subsampled) {
 
-    this->EPD.begin();
-	this->EPD.setFactor( get_temperature() );
-	this->EPD.clear();
-	this->EPD.image_subsample_by_2( bitmap_subsampled );
-	this->EPD.end();
-}
-#endif
-
-
-
+#endif //defined(EPD_DRAWBITMAP_FAST_SUPPORT)
 

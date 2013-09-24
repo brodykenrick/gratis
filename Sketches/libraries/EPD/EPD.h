@@ -24,11 +24,11 @@
 #include <avr/pgmspace.h>
 #endif
 
-#define EPD_PARTIAL_SCREEN_SRAM //!<If we intend to use partial screen (segments). Enables SRAM functions.
+#define EPD_PARTIAL_SCREEN_SRAM //!<Support partial screen (segments). Enables SRAM functions.
 
-#define EPD_PROGMEM_IMAGE_SUPPORT
+#define EPD_PROGMEM_IMAGE_SUPPORT //!<Support reading image buffers from PROGMEM (flash).
 
-//#define EPD_OLD_IMAGE_SUPPORT //!< Support old images for compensating...
+//#define EPD_OLD_IMAGE_SUPPORT //!< Support old image buffer for compensating. This is the normal mode for this library (the partial screen option does not use it - -so you probably want to disable this to save progmem if you are using partial).
 
 // If more SRAM available (8 kBytes)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega_2560__)
@@ -97,23 +97,17 @@ public:
 
 #if defined(EPD_PROGMEM_IMAGE_SUPPORT)
 	// assuming a clear (white) screen output an image (PROGMEM data)
-	void image(PROGMEM const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+	void image(PROGMEM const uint8_t *image, uint16_t first_line_no = 0, uint8_t line_count = 0, boolean subsampled_by_2 = false) {
 		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
 		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
-		this->frame_data_repeat(image, EPD_inverse, first_line_no, line_count);
-		this->frame_data_repeat(image, EPD_normal, first_line_no, line_count);
-	}
-
-void image_subsample_by_2(PROGMEM const uint8_t *image_subsampled_by_2, uint16_t first_line_no = 0, uint8_t line_count = 0) {
-		this->frame_fixed_repeat(0xaa, EPD_compensate, first_line_no, line_count);
-		this->frame_fixed_repeat(0xaa, EPD_white, first_line_no, line_count);
-		this->frame_data_repeat(image_subsampled_by_2, EPD_inverse, first_line_no, line_count, 2);
-		this->frame_data_repeat(image_subsampled_by_2, EPD_normal,  first_line_no, line_count, 2);
+		this->frame_data_repeat(image, EPD_inverse, first_line_no, line_count, subsampled_by_2);
+		this->frame_data_repeat(image, EPD_normal,  first_line_no, line_count, subsampled_by_2);
 	}
 
 #if defined(EPD_OLD_IMAGE_SUPPORT)
 	// change from old image to new image (PROGMEM data)
-	void image(PROGMEM const uint8_t *old_image, PROGMEM const uint8_t *new_image, uint16_t first_line_no = 0, uint8_t line_count = 0) {
+	void image(PROGMEM const uint8_t *old_image, PROGMEM const uint8_t *new_image,
+	           uint16_t first_line_no = 0, uint8_t line_count = 0) {
 		this->frame_data_repeat(old_image, EPD_compensate, first_line_no, line_count);
 		this->frame_data_repeat(old_image, EPD_white, first_line_no, line_count);
 		this->frame_data_repeat(new_image, EPD_inverse, first_line_no, line_count);
@@ -156,18 +150,18 @@ void image_subsample_by_2(PROGMEM const uint8_t *image_subsampled_by_2, uint16_t
 
 	// single frame refresh
 	void frame_fixed(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, uint8_t subsample_factor = 1);
+	void frame_data(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, boolean subsampled_by_2 = false);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-	void frame_sram(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_sram(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0); //TODO: Add subsample extensions.
 #endif //defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 
 
 	// stage_time frame refresh
 	void frame_fixed_repeat(uint8_t fixed_value, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
-	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, uint8_t subsample_factor = 1);
+	void frame_data_repeat(PROGMEM const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0, boolean subsampled_by_2 = false);
 #if defined(EPD_ENABLE_EXTRA_SRAM)
-	void frame_sram_repeat(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
+	void frame_sram_repeat(const uint8_t *new_image, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0); //TODO: Add subsample extensions.
 #endif //defined(EPD_ENABLE_EXTRA_SRAM)
 	void frame_cb_repeat(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no = 0, uint8_t line_count = 0);
 
