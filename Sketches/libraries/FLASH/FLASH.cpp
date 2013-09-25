@@ -55,6 +55,10 @@ enum {
 #define FLASH_MFG 0xc2
 #define FLASH_ID 0x2014
 
+//Additionally supported chip (on the EA board)
+#define FLASH_MFG_ADD0 (0xEF)
+#define FLASH_ID_ADD0  (0x4014)
+
 
 // the default FLASH device
 FLASH_Class FLASH(12);
@@ -103,7 +107,11 @@ bool FLASH_Class::available(void) {
 	this->info(&maufacturer, &device); // initial read to reset the chip
 	this->info(&maufacturer, &device); // actual read
 
-	return (FLASH_MFG == maufacturer) && (FLASH_ID == device);
+	return (
+	        (FLASH_MFG == maufacturer) && (FLASH_ID == device)
+	        ||
+	        (FLASH_MFG_ADD0 == maufacturer) && (FLASH_ID_ADD0 == device)
+	);
 }
 
 
@@ -171,7 +179,7 @@ void FLASH_Class::write_disable(void) {
 }
 
 
-void FLASH_Class::write(uint32_t address, const void *buffer, uint16_t length) {
+void FLASH_Class::write(uint32_t address, const void *buffer, uint16_t length, bool buffer_in_progmem) {
 	while (this->is_busy()) {
 	}
 
@@ -181,9 +189,22 @@ void FLASH_Class::write(uint32_t address, const void *buffer, uint16_t length) {
 	SPI.transfer(address >> 16);
 	SPI.transfer(address >> 8);
 	SPI.transfer(address);
+
 	for (const uint8_t *p = (const uint8_t *)buffer; length != 0; --length) {
-		SPI.transfer(*p++);
+		
+		// AVR has multiple memory spaces
+		uint8_t data;
+		if (buffer_in_progmem) {
+			data = pgm_read_byte_near( p );
+		} else {
+			data = *p;
+		}
+		
+		//SPI.transfer(*p++);
+		SPI.transfer(data);
+		p++;
 	}
+
 	this->spi_teardown();
 }
 

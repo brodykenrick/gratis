@@ -28,7 +28,7 @@
 
 #define EPD_PROGMEM_IMAGE_SUPPORT //!<Support reading image buffers from PROGMEM (flash).
 
-//#define EPD_OLD_IMAGE_SUPPORT //!< Support old image buffer for compensating. This is the normal mode for this library (the partial screen option does not use it - -so you probably want to disable this to save progmem if you are using partial).
+#define EPD_OLD_IMAGE_SUPPORT //!< Support old image buffer for compensating. This is the normal mode for this library (the partial screen option does not use it -- so you probably want to disable this to save progmem if you are using partial).
 
 // If more SRAM available (8 kBytes)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega_2560__)

@@ -468,7 +468,7 @@ void EPD_Class::frame_sram(const uint8_t *image, EPD_stage stage, uint16_t first
 
 
 void EPD_Class::frame_cb(uint32_t address, EPD_reader *reader, EPD_stage stage, uint16_t first_line_no, uint8_t line_count) {
-	static uint8_t buffer[264 / 8]; //Look at size here with line ranges in play....
+	static uint8_t buffer[264 / 8];
     if(line_count == 0)
     {
         line_count = this->lines_per_display;
@@ -676,14 +676,6 @@ void EPD_Class::line(uint16_t line, const uint8_t *data, uint8_t fixed_value, bo
 	SPI_send(this->EPD_Pin_EPD_CS, CU8(0x72, 0x2f), 2);
 
 	SPI_off();
-
-#if 0
-	{
-	    //TODO: Remove this
-	    extern int check_memory();
-	    check_memory();
-	}
-#endif
 }
 
 

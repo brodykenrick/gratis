@@ -46,7 +46,7 @@ public:
 	void read(void *buffer, uint32_t address, uint16_t length);
 	void write_enable(void);
 	void write_disable(void);
-	void write(uint32_t address, const void *buffer, uint16_t length);
+	void write(uint32_t address, const void *buffer, uint16_t length, bool buffer_in_progmem = false);
 	void sector_erase(uint32_t address);
 
 	// inline static void attachInterrupt();

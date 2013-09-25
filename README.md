@@ -18,7 +18,7 @@ These are example programs that will compile and run on the following platforms:
 
 The thermo demo and a new demo are added under EPD_GFX as examples (so they will be picked up in Arduino IDE) [See gratis/Sketches/libraries/EPD_GFX/examples].
 
-
+The flash_loader demo is rewritten for the EA board with its shared chip select for Flash/EPD (and the flash library tweaked).
 
 The following should still work but have not been tested.
 
