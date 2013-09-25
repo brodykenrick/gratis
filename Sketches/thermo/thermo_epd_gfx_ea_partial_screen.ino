@@ -1,0 +1,1 @@
+../libraries/EPD_GFX/examples/thermo_epd_gfx_ea_partial_screen/thermo_epd_gfx_ea_partial_screen.ino
