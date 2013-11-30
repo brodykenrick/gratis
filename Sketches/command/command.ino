@@ -1,3 +1,8 @@
+// Support for EA board
+// http://www.embeddedartists.com/products/displays/lcd_27_epaper.php
+// Rev. C with SPI flash (on same SSEL) tested
+#define EMBEDDED_ARTISTS
+
 // -*- mode: c++ -*-
 // Copyright 2013 Pervasive Displays, Inc.
 //
@@ -22,11 +27,17 @@
 #include <SPI.h>
 #include <FLASH.h>
 #include <EPD.h>
+//Temperature sensor
+#ifndef EMBEDDED_ARTISTS
 #include <S5813A.h>
+#else /* EMBEDDED_ARTISTS */
+#include <Wire.h>
+#include <LM75A.h>
+#endif /* EMBEDDED_ARTISTS */
 
 
 // Change this for different display size
-#define EPD_SIZE EPD_2_0
+#define EPD_SIZE EPD_2_7
 
 #define COMMAND_VERSION "2"
 
@@ -51,16 +62,22 @@ const int Pin_RED_LED = P1_0;
 #else
 
 // Arduino IO layout
+#ifndef EMBEDDED_ARTISTS
 const int Pin_TEMPERATURE = A0;
-const int Pin_PANEL_ON = 2;
+#endif /* ! EMBEDDED_ARTISTS */
+const int Pin_PANEL_ON = 2;  //a.k.a PWR_CTRL
 const int Pin_BORDER = 3;
 const int Pin_DISCHARGE = 4;
 const int Pin_PWM = 5;
 const int Pin_RESET = 6;
 const int Pin_BUSY = 7;
 const int Pin_EPD_CS = 8;
+#ifndef EMBEDDED_ARTISTS
 const int Pin_FLASH_CS = 9;
 const int Pin_SW2 = 12;
+#else
+//Note for EA Rev. B the SN74LVC1G139 decoder/multiplexer (U3 on the board) is re-used for SSEL of the flash. Thus there is no separate flash SSEL.
+#endif /* ! EMBEDDED_ARTISTS */
 const int Pin_RED_LED = 13;
 
 #endif
@@ -96,12 +113,40 @@ static void Serial_hex_dump(uint32_t address, const void *buffer, uint16_t lengt
 // define the E-Ink display
 EPD_Class EPD(EPD_SIZE, Pin_PANEL_ON, Pin_BORDER, Pin_DISCHARGE, Pin_PWM, Pin_RESET, Pin_BUSY, Pin_EPD_CS);
 
+#ifdef EMBEDDED_ARTISTS
+LM75A_Class LM75A;
+#endif /* EMBEDDED_ARTISTS */
+
+
+//Note for EA Rev. B the SN74LVC1G139 decoder/multiplexer (U3 on the board) is used for SSEL of the flash
+//SN74LVC1G139 @ http://www.ti.com/lit/ds/symlink/sn74lvc1g139.pdf
+//SSEL(Pin_EPD_CS):Dec-A[In]
+//PWR_CTRL(Pin_PANEL_ON):Dec-B[In]
+//Dec-Y0[Out]:SSEL_FLASH[Unexposed on board signal]
+//Dec-Y2[Out]:SSEL_DISP[Unexposed on board signal]
+
+//Pin_PANEL_ON:B || Pin_EPD_CS:A || SSEL_FLASH:Y0 || SSEL_DISP:Y2
+//   L                 L                 L               H
+//   L                 H                 H               H
+//   H                 L                 H               L
+//   H                 H                 H               H
+void selectFlash() {
+  digitalWrite(Pin_PANEL_ON, LOW);
+}
+
+void selectEPD() {
+  digitalWrite(Pin_PANEL_ON, HIGH); //Change back to using SSEL for EPD
+}
+
+
 
 // I/O setup
 void setup() {
 	pinMode(Pin_RED_LED, OUTPUT);
+#ifndef EMBEDDED_ARTISTS
 	pinMode(Pin_SW2, INPUT);
 	pinMode(Pin_TEMPERATURE, INPUT);
+#endif /* ! EMBEDDED_ARTISTS */
 	pinMode(Pin_PWM, OUTPUT);
 	pinMode(Pin_BUSY, INPUT);
 	pinMode(Pin_RESET, OUTPUT);
@@ -109,7 +154,9 @@ void setup() {
 	pinMode(Pin_DISCHARGE, OUTPUT);
 	pinMode(Pin_BORDER, OUTPUT);
 	pinMode(Pin_EPD_CS, OUTPUT);
+#ifndef EMBEDDED_ARTISTS
 	pinMode(Pin_FLASH_CS, OUTPUT);
+#endif /* ! EMBEDDED_ARTISTS */
 
 	digitalWrite(Pin_RED_LED, LOW);
 	digitalWrite(Pin_PWM, LOW);
@@ -118,9 +165,16 @@ void setup() {
 	digitalWrite(Pin_DISCHARGE, LOW);
 	digitalWrite(Pin_BORDER, LOW);
 	digitalWrite(Pin_EPD_CS, LOW);
+#ifndef EMBEDDED_ARTISTS
 	digitalWrite(Pin_FLASH_CS, HIGH);
+#else /* EMBEDDED_ARTISTS */
+  SPI.begin();
+  SPI.setBitOrder(MSBFIRST);
+  SPI.setDataMode(SPI_MODE0);
+  SPI.setClockDivider(SPI_CLOCK_DIV4);
+#endif /* EMBEDDED_ARTISTS */
 
-	Serial.begin(9600);
+	Serial.begin(115200);
 #if !defined(__MSP430_CPU__)
 	// wait for USB CDC serial port to connect.  Arduino Leonardo only
 	while (!Serial) {
@@ -132,12 +186,32 @@ void setup() {
 	Serial.println("Display: " MAKE_STRING(EPD_SIZE));
 	Serial.println();
 
+#ifndef EMBEDDED_ARTISTS
 	FLASH.begin(Pin_FLASH_CS);
+#else
+        selectFlash();
+	FLASH.begin(Pin_EPD_CS);
+#endif /* ! EMBEDDED_ARTISTS */
+
 	flash_info();
 
+#ifndef EMBEDDED_ARTISTS
 	// configure temperature sensor
 	S5813A.begin(Pin_TEMPERATURE);
+#endif /* ! EMBEDDED_ARTISTS */
 }
+
+void startEPD() {
+        selectEPD();
+        EPD.begin();
+#ifndef EMBEDDED_ARTISTS
+        int temperature = S5813A.read();
+#else /* EMBEDDED_ARTISTS */
+        int temperature = LM75A.read();
+#endif /* EMBEDDED_ARTISTS */
+        EPD.setFactor(temperature);
+}
+
 
 // main loop
 void loop() {
@@ -166,6 +240,7 @@ void loop() {
 		break;
 	case 'd':
 	{
+                selectFlash();
 		uint16_t sector = Serial_gethex(true);
 		Serial.print(' ');
 		uint16_t count = Serial_gethex(true);
@@ -189,6 +264,7 @@ void loop() {
 
 	case 'e':
 	{
+                selectFlash();
 		uint32_t sector = Serial_gethex(true);
 		FLASH.write_enable();
 		FLASH.sector_erase(sector << 12);
@@ -198,6 +274,7 @@ void loop() {
 
 	case 'u':
 	{
+                selectFlash();
 		uint32_t address = Serial_gethex(true);
 		address <<= 12;
 		xbm_count = 0;
@@ -242,9 +319,7 @@ void loop() {
 	{
 		uint32_t address = Serial_gethex(true);
 		address <<= 12;
-		EPD.begin();
-		int t = S5813A.read();
-		EPD.setFactor(t);
+                startEPD();
 		EPD.frame_cb_repeat(address, flash_read, EPD_inverse);
 		EPD.frame_cb_repeat(address, flash_read, EPD_normal);
 		EPD.end();
@@ -255,9 +330,7 @@ void loop() {
 	{
 		uint32_t address = Serial_gethex(true);
 		address <<= 12;
-		EPD.begin();
-		int t = S5813A.read();
-		EPD.setFactor(t);
+                startEPD();
 		EPD.frame_cb_repeat(address, flash_read, EPD_compensate);
 		EPD.frame_cb_repeat(address, flash_read, EPD_white);
 		EPD.end();
@@ -266,6 +339,7 @@ void loop() {
 
 	case 'l':
 	{
+                selectFlash();
 		Serial.println();
 		uint16_t per_line = 0;
 		for (uint16_t sector = 0; sector <= 0xff; ++sector) {
@@ -303,36 +377,17 @@ void loop() {
 
 	case 'f':
 	{
-		Serial.println();
+		selectFlash();
+                Serial.println();
 		flash_info();
 		break;
 	}
 
 	case 'w':
 	{
-		EPD.begin();
-		int t = S5813A.read();
-		EPD.setFactor(t);
+		startEPD();
 		EPD.clear();
 		EPD.end();
-		break;
-	}
-
-	case 't':
-	{
-		long vADC = analogRead(Pin_TEMPERATURE);
-		Serial.println();
-		Serial.print("Temperature ADC = ");
-		Serial.print(vADC);
-		Serial.print(" (0x");
-		Serial_puthex_word(vADC);
-		Serial.print(")");
-		Serial.println();
-		Serial.print("Temperature = ");
-		Serial.print(S5813A.read());
-		Serial.print(" Celcius");
-		Serial.println();
-
 		break;
 	}
 
@@ -364,7 +419,9 @@ static void flash_info(void) {
 
 
 static void flash_read(void *buffer, uint32_t address, uint16_t length) {
+        selectFlash();
 	FLASH.read(buffer, address, length);
+        selectEPD();
 }
 
 
