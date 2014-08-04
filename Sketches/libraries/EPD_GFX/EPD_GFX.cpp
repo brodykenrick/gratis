@@ -57,7 +57,7 @@ void EPD_GFX::display(boolean clear_first, boolean begin, boolean end) {
         this->EPD.clear(current_segment * this->pixel_height_segment, this->pixel_height_segment);
     }
     //NOTE: Although the expectation is that pixel_height_segment is going to be in an uint8_t keep an eye on this...
-    assert( this->pixel_height_segment <= 255);
+//    assert( this->pixel_height_segment <= 255); // AK: Teensy3.1 does not like "assert"
 	this->EPD.image_sram(this->new_image, current_segment * this->pixel_height_segment,
 	                    (uint8_t)this->pixel_height_segment);
 
