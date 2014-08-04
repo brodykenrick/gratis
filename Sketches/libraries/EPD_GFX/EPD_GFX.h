@@ -22,7 +22,7 @@
 #define EPD_GFX_H 1
 
 #include <Arduino.h>
-#include <assert.h>
+// #include <assert.h>// AK: Teensy3.1 does not like "assert"
 
 #include <EPD.h>
 
@@ -123,13 +123,13 @@ public:
 		pixel_width(pixel_width), pixel_height(pixel_height), pixel_height_segment(pixel_height_segment)
 	{
         //Assumes divisor with no remainder....
-        assert( (pixel_height%pixel_height_segment) == 0);
+//        assert( (pixel_height%pixel_height_segment) == 0);// AK: Teensy3.1 does not like "assert"
 		total_segments   = pixel_height/pixel_height_segment;
 		current_segment = 0;
 
         //Buffer is only a subset of the total frame. We call this a segment.
     	new_image = new uint8_t[  get_segment_buffer_size_bytes() ];
-    	assert( new_image );
+//    	assert( new_image ); // AK: Teensy3.1 does not like "assert"
 	}
 	
 	uint16_t get_segment_buffer_size_bytes() 
@@ -164,9 +164,9 @@ public:
 	//However it gets called MANY times that are wasteful....
 	//VERY inefficient!
 	//The calling functions can be optimised though (drawChar has been -- others not yet)
-	void drawPixel(int16_t x, int16_t y, unsigned int colour)
+	void drawPixel(int16_t x, int16_t y, uint16_t colour) // AK replaced "unsigned int" with "uint16_t" to work with Teensy3.1 
 	{
-	    assert(y>=0); //BK: Not sure why it is allowed to be negative......
+//	    assert(y>=0); //BK: Not sure why it is allowed to be negative......// AK: Teensy3.1 does not like "assert"
         if(
             ((uint16_t)y >= ( current_segment    * this->pixel_height_segment))
             &&
